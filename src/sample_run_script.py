@@ -6,13 +6,13 @@ from src.sample_controller import FuzzyController
 if __name__ == "__main__":
     # Available settings
     settings = {
-        # "graphics_on": True,
-        # "sound_on": False,
+        "graphics_on": True,
+        "sound_on": True,
         # "frequency": 60,
         "real_time_multiplier": 2,
         # "lives": 3,
         # "prints": True,
-        # "allow_key_presses": False
+        "allow_key_presses": False
     }
 
     # Whether the users controller should be run
