@@ -7,12 +7,12 @@ if __name__ == "__main__":
     # Available settings
     settings = {
         "graphics_on": True,
-        "sound_on": True,
+        "sound_on": False,
         # "frequency": 60,
         "real_time_multiplier": 2,
         # "lives": 3,
         # "prints": True,
-        "allow_key_presses": False
+        "allow_key_presses": True
     }
 
     # Whether the users controller should be run
