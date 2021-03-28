@@ -43,6 +43,39 @@ class FuzzyController(ControllerBase):
         I think for defensive shooting we could have it intentionally over shoot by turning too fast 
         as to simulate leading the shot
         """
+        """
+        Angle Normalizer if the difference is greater than 180 or less
+        """
+        def norm(angle):
+            if angle>0:
+                new_angle=angle
+            elif angle<0:
+                new_angle=360+angle
+            else:
+                new_angle=0
+            return new_angle
+        self.norm=norm
+        """
+        Function That Tells You Whether Rotating Left or Right to the asteroid is faster
+        0 is left, 1 is right
+        use normalized angles
+        """
+        def leftrightcheck(shipangle,astangle):
+            diff=shipangle-astangle
+            absdiff=abs(diff)
+            if absdiff<180 and diff>0:
+                leftright=1
+            elif absdiff<180 and diff<0:
+                leftright=0
+            elif absdiff>180 and diff>0:
+                leftright=0
+            elif absdiff>180 and diff<0:
+                leftright=1
+            else:
+                leftright=0
+                print('problem in left right checker')
+            return leftright
+        self.leftright=leftrightcheck
 
         """
         Chaffe Clearing Rotation Controller
@@ -96,9 +129,16 @@ class FuzzyController(ControllerBase):
         """ Positive if above, negative if below"""
         """ negative if left, positive if right"""
         print("---")
-        print(ship.angle)
-        print(s_rangle)
+
         orientation=abs(ship.angle-s_rangle)
+        normal_shipangle=self.norm(ship.angle)
+        normal_astangle=self.norm(s_rangle)
+        diff=ship.angle-s_rangle
+        leftright = self.leftright(normal_shipangle,normal_astangle)
+        if leftright==0:
+            print('left')
+        else:
+            print('right')
         """Evasive Manuevers, I think we could expand this to considering the closest three 
         asteroids and fuzzily deciding which direction to flee in
         
