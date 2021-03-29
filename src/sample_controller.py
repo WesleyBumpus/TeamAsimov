@@ -111,25 +111,23 @@ class FuzzyController(ControllerBase):
         import math
         import numpy
         astnum=len(input_data['asteroids'])
-        print(astnum)
+        """Going to make some serious changes to allow it to the five closest asteroids"""
         if astnum>0:
             distance=numpy.zeros(astnum)
+            for p in range (0,astnum):
+                distance[p]=1000
             shortest_distance=1000
             closest_asteroid=0
+            astnumo=astnum-1
+            closest_asteroids=[astnumo,astnumo,astnumo,astnumo,astnumo]
             total_velocity=abs((ship.velocity[0]**2+ship.velocity[1]**2)**0.5)
             if total_velocity>0:
                 if ship.velocity[1]>0:
                     travel_angle = -1*math.degrees(math.asin(ship.velocity[0]/ total_velocity))
-                    print(travel_angle)
-                    print(ship.angle)
                 elif ship.velocity[0]>0:
                     travel_angle = -180 + math.degrees(math.asin(ship.velocity[0] / total_velocity))
-                    print(travel_angle)
-                    print(ship.angle)
                 elif ship.velocity[0]<0:
                     travel_angle = 180 + math.degrees(math.asin(ship.velocity[0] / total_velocity))
-                    print(travel_angle)
-                    print(ship.angle)
                 else:
                     travel_angle=0
 
@@ -148,9 +146,44 @@ class FuzzyController(ControllerBase):
             and sets the shortest distance and closest asteroid"""
             for n in range (0,astnum):
                 distance[n]=(((input_data['asteroids'][n]['position'][0])-ship.center_x)**2+((input_data['asteroids'][n]['position'][1])-ship.center_y)**2)**0.5
+                ticker=0
                 if distance[n]<shortest_distance:
                     shortest_distance=distance[n]
                     closest_asteroid=n
+                    closest_asteroids[4] = closest_asteroids[3]
+                    closest_asteroids[3] = closest_asteroids[2]
+                    closest_asteroids[2] = closest_asteroids[1]
+                    closest_asteroids[1] = closest_asteroids[0]
+                    closest_asteroids[0] = closest_asteroid
+
+                elif distance[n]<distance[closest_asteroids[1]]:
+                    closest_asteroids[4] = closest_asteroids[3]
+                    closest_asteroids[3] = closest_asteroids[2]
+                    closest_asteroids[2] = closest_asteroids[1]
+                    closest_asteroids[1] = n
+                elif distance[n] < distance[closest_asteroids[2]]:
+                    closest_asteroids[4] = closest_asteroids[3]
+                    closest_asteroids[3] = closest_asteroids[2]
+                    closest_asteroids[2] = n
+                elif distance[n] < distance[closest_asteroids[3]]:
+                    closest_asteroids[4] = closest_asteroids[3]
+                    closest_asteroids[3] = n
+                elif distance[n] < distance[closest_asteroids[4]]:
+                    closest_asteroids[4] = n
+            abovebelow_array=numpy.zeros(5)
+            hypotenuse_array=numpy.zeros(5)
+            opposite_array=numpy.zeros(5)
+            rangle_array=numpy.zeros(5)
+            orientation_array=numpy.zeros(5)
+            normal_shipangle = self.norm(ship.angle)
+
+            for n in range (0,5):
+                abovebelow_array[n] = input_data['asteroids'][closest_asteroids[n]]['position'][1] - ship.center_y
+                hypotenuse_array[n]= distance[closest_asteroids[n]]
+                opposite_array[n] = input_data['asteroids'][closest_asteroids[n]]['position'][0] - ship.center_x
+                rangle_array[n]=self.rangle(opposite_array[n], hypotenuse_array[n], abovebelow_array[n], opposite_array[n])
+                orientation_array[n] = abs(ship.angle - rangle_array[n])
+
             abovebelow = input_data['asteroids'][closest_asteroid]['position'][1] - ship.center_y
             leftright = input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x
             opposite=(input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x)
@@ -162,9 +195,7 @@ class FuzzyController(ControllerBase):
             """ Positive if above, negative if below"""
             """ negative if left, positive if right"""
             print("---")
-
             orientation=abs(ship.angle-s_rangle)
-            normal_shipangle=self.norm(ship.angle)
             normal_astangle=self.norm(s_rangle)
             normal_cangle = self.norm(anglefromcenter)
             diff=ship.angle-s_rangle
@@ -192,11 +223,9 @@ class FuzzyController(ControllerBase):
                     pass
                 elif t_orientation>60:
                     print('braking engaged')
-                    print(t_orientation)
                     ship.thrust=ship.thrust_range[1]
                 elif t_orientation<60:
                     print('braking engaged')
-                    print(t_orientation)
                     ship.thrust=ship.thrust_range[0]
                 else:
                     print('something wonky afoot')
@@ -208,8 +237,8 @@ class FuzzyController(ControllerBase):
     
                     for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
                     behave accordingly """
-                if orientation>120:
-                    ship.thrust=ship.thrust_range[1]
+                if orientation>150:
+                    ship.thrust=ship.thrust_range[0]
                 elif orientation>70 and orientation<110 and shortest_distance<45:
                     ship.thrust = 0
                     ship.turn_rate=180
@@ -253,9 +282,18 @@ class FuzzyController(ControllerBase):
 
             if orientation < 2:
 
-                if self.wack > hypotenuse/40:
+                if self.wack > hypotenuse/astnum:
                     self.wack = 0
                     ship.shoot()
+            else:
+                counter=0
+                for n in range(0,5):
+                    if orientation_array[n] < 2:
+                        counter=counter+1
+                if counter>0:
+                    if self.wack > hypotenuse/ astnum:
+                        self.wack = 0
+                        ship.shoot()
             """
             elif len(input_data['asteroids']) > 3:
     
