@@ -237,9 +237,9 @@ class FuzzyController(ControllerBase):
     
                     for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
                     behave accordingly """
-                if orientation>150:
+                if orientation>120:
                     ship.thrust=ship.thrust_range[0]
-                elif orientation>70 and orientation<110 and shortest_distance<45:
+                elif orientation>70 and orientation<120 and shortest_distance<45:
                     ship.thrust = 0
                     ship.turn_rate=180
                 else:
