@@ -25,6 +25,7 @@ class FuzzyController(ControllerBase):
         import skfuzzy.control as ctrl
         import numpy
         self.hi=30
+        self.wack=0
         """
         Checking the asteroid angle relative to the ship
         """
@@ -192,12 +193,10 @@ class FuzzyController(ControllerBase):
                 print('braking engaged')
                 print(t_orientation)
                 ship.thrust=ship.thrust_range[1]
-                ship.shoot()
             elif t_orientation<60:
                 print('braking engaged')
                 print(t_orientation)
                 ship.thrust=ship.thrust_range[0]
-                ship.shoot()
             else:
                 print('something wonky afoot')
                 clast_size = input_data['asteroids'][closest_asteroid]['size']
@@ -213,55 +212,57 @@ class FuzzyController(ControllerBase):
             elif orientation>70 and orientation<110 and shortest_distance<45:
                 ship.thrust = 0
                 ship.turn_rate=180
-                ship.shoot()
             else:
                 ship.thrust = ship.thrust_range[0]
-                ship.shoot()
-
-
-
-        elif ship.center_x>700 or ship.center_x<100 or ship.center_y>500 or ship.center_y<100:
+            """
+            Egde Clearing is Awesome, Needs to be adapted for search and destroy
+            elif ship.center_x>700 or ship.center_x<100 or ship.center_y>500 or ship.center_y<100:
             turn=self.leftright(normal_shipangle,normal_cangle)
             center_orientation=abs(ship.angle-anglefromcenter)
             if center_orientation<10:
                 ship.thrust=ship.thrust_range[1]
-                ship.shoot()
             elif turn==0:
                 ship.turn_rate=180
             else:
                 ship.turn_rate=-180
+            """
+        elif input_data['time']>0 and shortest_distance>(70 + (50 * clast_size)):
+            if leftright == 0:
+                ship.turn_rate = 180
+                ship.thrust = ship.thrust_range[1]
+            else:
+                ship.turn_rate = -180
+                ship.thrust = ship.thrust_range[1]
 
+            if orientation < 2:
+                n = n - 1
+                ship.thrust=ship.thrust_range[1]
 
+        if leftright == 0 or leftright==1:
+            if leftright == 0 and orientation > 5:
+                ship.turn_rate = 180
+            elif leftright == 0 and orientation <= 5:
+                ship.turn_rate = 90
+            elif leftright == 1 and orientation > 5:
+                ship.turn_rate = -180
+            else:
+                ship.turn_rate = -90
+
+        self.wack += 6
+
+        if orientation < 2:
+
+            if self.wack > hypotenuse/40:
+                self.wack = 0
+                ship.shoot()
+        """
         elif len(input_data['asteroids']) > 3:
 
-            """
-            ship.center_x
-            ship.center_y
-            ship.velocity
-            ship.angle
-            print(ship.angle)
-            """
-            """
-            print(input_data['asteroids'][0]['position'][0])
-            print(input_data['asteroids'][0]['position'][1])
-            """
-            """
-    
-            print(ship)
-            ship.turn_rate = 160.0
-    
-            ship.thrust = ship.thrust_range[0]
-            """
-
-            ship.shoot()
-            self.tr_sim.input['asteroid_num'] = len(input_data['asteroids'])
-            self.tr_sim.compute()
-            ship.turn_rate = self.tr_sim.output['TR']
-            """We'll need to use orientation to teach it to break since velocity can be measured using r_angle"""
-
-
+        self.tr_sim.input['asteroid_num'] = len(input_data['asteroids'])
+        self.tr_sim.compute()
+        ship.turn_rate = self.tr_sim.output['TR']
+           
         else:
-            ship.shoot()
-            ship.turn_rate = 40
+        ship.turn_rate = 40"""
 
 
