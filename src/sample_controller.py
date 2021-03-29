@@ -36,6 +36,8 @@ class FuzzyController(ControllerBase):
                 angle = 180+(math.degrees(math.asin(opposite/hypotenuse)))
             elif abovebelow < 0 and leftright > 0:
                 angle = -180+(math.degrees(math.asin(opposite/hypotenuse)))
+            else:
+                angle=0
             return angle
         self.rangle=r_angle
         """
@@ -166,11 +168,17 @@ class FuzzyController(ControllerBase):
         diff=ship.angle-s_rangle
         leftright = self.leftright(normal_shipangle,normal_astangle)
         clast_size = input_data['asteroids'][closest_asteroid]['size']
-
         """
         This is the master if function in which it determines which behavior mode to fall into 
         """
-        if total_velocity>1.5:
+        if ship.respawn_time_left>0:
+            if shortest_distance < 55 + (5 * clast_size):
+                if orientation>120:
+                    ship.thrust=ship.thrust_range[1]
+                elif orientation>70 and orientation<110 and shortest_distance<45:
+                    ship.thrust = 0
+                    ship.turn_rate=180
+        elif total_velocity>1.5:
 
             """
             Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
@@ -196,10 +204,10 @@ class FuzzyController(ControllerBase):
 
         elif shortest_distance < 55 + (5 * clast_size):
             """Evasive Manuevers, I think we could expand this to considering the closest three 
-                    asteroids and fuzzily deciding which direction to flee in
+                asteroids and fuzzily deciding which direction to flee in
 
-                    for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
-                     behave accordingly """
+                for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
+                behave accordingly """
             if orientation>120:
                 ship.thrust=ship.thrust_range[1]
             elif orientation>70 and orientation<110 and shortest_distance<45:
