@@ -94,6 +94,7 @@ class FuzzyController(ControllerBase):
         tr_rule2 = ctrl.Rule(antecedent=(asteroid_num['high']), consequent=TR['high'], label='tr_rule_2')
         tr_system = ctrl.ControlSystem(rules=[tr_rule0, tr_rule1, tr_rule2])
         self.tr_sim = ctrl.ControlSystemSimulation(tr_system)
+        self.roe=300
 
     def actions(self, ship: SpaceShip, input_data: Dict[str, Tuple]) -> None:
 
@@ -110,8 +111,9 @@ class FuzzyController(ControllerBase):
         import skfuzzy.control as ctrl
         import math
         import numpy
-        roe_zone = 500
+        roe_zone = self.roe
         astnum=len(input_data['asteroids'])
+
         """Going to make some serious changes to allow it to the five closest asteroids"""
         if astnum>0:
             distance=numpy.zeros(astnum)
@@ -212,100 +214,117 @@ class FuzzyController(ControllerBase):
             """
             This is the master if function in which it determines which behavior mode to fall into 
             """
-            if ship.respawn_time_left > 0:
-                if shortest_distance < 55 + (5 * clast_size):
-                    if orientation > 120:
-                        ship.thrust = ship.thrust_range[1]
-                    elif orientation > 70 and orientation < 110 and shortest_distance < 45:
-                        ship.thrust = 0
-                        ship.turn_rate = 180
-            elif total_velocity>1.5:
-
-                """
-                Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
-                asteroids and you do you don't want it to slignshot past on into another
-                """
-
-                t_orientation=abs(ship.angle-travel_angle)
-                if travel_angle==0:
-                    pass
-                elif t_orientation>60:
-                    print('braking engaged')
-                    ship.thrust=ship.thrust_range[1]
-                elif t_orientation<60:
-                    print('braking engaged')
-                    ship.thrust=ship.thrust_range[0]
-                else:
-                    print('something wonky afoot')
-                    clast_size = input_data['asteroids'][closest_asteroid]['size']
-
-            elif shortest_distance < 60 + (5 * clast_size):
-                """Evasive Manuevers, I think we could expand this to considering the closest three 
-                    asteroids and fuzzily deciding which direction to flee in
-    
-                    for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
-                    behave accordingly """
-                if orientation>120:
-                    ship.thrust=ship.thrust_range[1]
-                elif orientation>60 and orientation<120 and shortest_distance<45:
+            if ship.respawn_time_left > 0 and shortest_distance < 45 + (5 * clast_size):  # Respawn Behavior
+                if orientation > 160:
+                    ship.thrust = ship.thrust_range[1]
+                elif orientation <= 160:
                     ship.thrust = 0
-                    ship.turn_rate=180
-                else:
-                    ship.thrust=ship.thrust_range[0]
+                    ship.turn_rate = 180
+
+            else:
+                if total_velocity > 1.5:  # Braking Speed Determinant
+
+                    """
+                    Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
+                    asteroids and you do you don't want it to slignshot past on into another
+                    """
+
+                    t_orientation=abs(ship.angle-travel_angle)
+                    if travel_angle==0:
+                        pass
+                    elif t_orientation>60:
+                        print('braking engaged')
+                        ship.thrust=ship.thrust_range[1]
+                    elif t_orientation<60:
+                        print('braking engaged')
+                        ship.thrust=ship.thrust_range[0]
+                    else:
+                        print('something wonky afoot')
+                        clast_size = input_data['asteroids'][closest_asteroid]['size']
+
+
+                elif shortest_distance < 45 + (10 * clast_size):
+
+                    """Evasive Manuevers, I think we could expand this to considering the closest three 
+    
+                        asteroids and fuzzily deciding which direction to flee in
+    
+    
+                        for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
+    
+                        behave accordingly """
+
+                    if orientation > 150:
+
+                        ship.thrust = ship.thrust_range[1]
+
+                    elif orientation > 70 and orientation < 151 and shortest_distance < 45:
+
+                        ship.thrust = 0
+
+                        ship.turn_rate = 180
+
+                    else:
+
+                        ship.thrust = ship.thrust_range[0]
+                    """
+                    Egde Clearing is Awesome, Needs to be adapted for search and destroy
+                    elif ship.center_x>700 or ship.center_x<100 or ship.center_y>500 or ship.center_y<100:
+                    turn=self.leftright(normal_shipangle,normal_cangle)
+                    center_orientation=abs(ship.angle-anglefromcenter)
+                    if center_orientation<10:
+                        ship.thrust=ship.thrust_range[1]
+                    elif turn==0:
+                        ship.turn_rate=180
+                    else:
+                        ship.turn_rate=-180
+                    """
+                elif ship.center_x > 650 or ship.center_x < 150 or ship.center_y > 450 or ship.center_y < 150:
+                    turn = self.leftright(normal_shipangle, normal_cangle)
+                    center_orientation = abs(ship.angle - anglefromcenter)
+                    if center_orientation < 10:
+                        ship.thrust = ship.thrust_range[1]
+                    elif turn == 0:
+                        ship.turn_rate = 180
+                    else:
+                        ship.turn_rate = -180
+                elif input_data['time']>0 and shortest_distance>(50 + (70 * clast_size)):
+                    if leftright == 0:
+                        ship.turn_rate = 180
+                        ship.thrust = ship.thrust_range[1]
+                    else:
+                        ship.turn_rate = -180
+                        ship.thrust = ship.thrust_range[1]
+
+                    if orientation < 2:
+                        n = n - 1
+                        ship.thrust=ship.thrust_range[1]
+
+                if leftright == 0 or leftright==1:
+                    if leftright == 0 and orientation > 5:
+                        ship.turn_rate = 180
+                    elif leftright == 0 and orientation <= 5:
+                        ship.turn_rate = 90
+                    elif leftright == 1 and orientation > 5:
+                        ship.turn_rate = -180
+                    else:
+                        ship.turn_rate = -90
+
                 """
-                Egde Clearing is Awesome, Needs to be adapted for search and destroy
-                elif ship.center_x>700 or ship.center_x<100 or ship.center_y>500 or ship.center_y<100:
-                turn=self.leftright(normal_shipangle,normal_cangle)
-                center_orientation=abs(ship.angle-anglefromcenter)
-                if center_orientation<10:
-                    ship.thrust=ship.thrust_range[1]
-                elif turn==0:
-                    ship.turn_rate=180
-                else:
-                    ship.turn_rate=-180
+                Shooting Mechanism
                 """
-            elif ship.center_x > 650 or ship.center_x < 150 or ship.center_y > 450 or ship.center_y < 150:
-                turn = self.leftright(normal_shipangle, normal_cangle)
-                center_orientation = abs(ship.angle - anglefromcenter)
-                if center_orientation < 10:
-                    ship.thrust = ship.thrust_range[1]
-                elif turn == 0:
-                    ship.turn_rate = 180
-                else:
-                    ship.turn_rate = -180
-            elif input_data['time']>0 and shortest_distance>(60 + (70 * clast_size)):
-                if leftright == 0:
-                    ship.turn_rate = 180
-                    ship.thrust = ship.thrust_range[1]
-                else:
-                    ship.turn_rate = -180
-                    ship.thrust = ship.thrust_range[1]
+                self.wack += 6000  # wack increases until it reaches a fire threshold
 
-                if orientation < 2:
-                    n = n - 1
-                    ship.thrust=ship.thrust_range[1]
-
-            if leftright == 0 or leftright==1:
-                if leftright == 0 and orientation > 5:
-                    ship.turn_rate = 180
-                elif leftright == 0 and orientation <= 5:
-                    ship.turn_rate = 90
-                elif leftright == 1 and orientation > 5:
-                    ship.turn_rate = -180
-                else:
-                    ship.turn_rate = -90
-
-            self.wack += 6000
-
-            for l in range(0, len(orientation2)):
-                # print(orientation2)
-                if orientation < 2 or orientation2[l] < 4:
-                    # if orientation2[l] < 100:
-                    # print(orientation2[l])
-                    # if orientation2[l] < 10:
-                    # print('TRICK SHOT!')
-                    if self.wack > hypotenuse ** 2:
-                        self.wack = 0
-                        ship.shoot()
+                for l in range(0, len(orientation2)):  # runs this once for every asteroid in the ROE zone.
+                    # print(orientation2)
+                    if orientation < 2 or orientation2[l] < 4:  #
+                        # if orientation2[l] < 100:
+                        # print(orientation2[l])
+                        # if orientation2[l] < 4:
+                        # print('TRICK SHOT!')
+                        # ship.shoot()
+                        if self.wack > hypotenuse ** 2:
+                            self.wack = 0
+                            ship.shoot()
 
 
