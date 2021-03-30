@@ -110,6 +110,7 @@ class FuzzyController(ControllerBase):
         import skfuzzy.control as ctrl
         import math
         import numpy
+        roe_zone = 500
         astnum=len(input_data['asteroids'])
         """Going to make some serious changes to allow it to the five closest asteroids"""
         if astnum>0:
@@ -144,32 +145,39 @@ class FuzzyController(ControllerBase):
             """Below it goes through the asteroids, 
             records their distance, 
             and sets the shortest distance and closest asteroid"""
+            inrange_distance = numpy.zeros(astnum)
+            inrange_asteroid = numpy.zeros(astnum)
+            astrange = 0
+
+            ab2 = numpy.zeros(100)
+            lr2 = numpy.zeros(100)
+            op2 = numpy.zeros(100)
+            hyp2 = numpy.zeros(100)
+            s_rangle_inrange = numpy.zeros(100)
+
+            orientation2 = numpy.ones(100) * 100
             for n in range (0,astnum):
                 distance[n]=(((input_data['asteroids'][n]['position'][0])-ship.center_x)**2+((input_data['asteroids'][n]['position'][1])-ship.center_y)**2)**0.5
                 ticker=0
                 if distance[n]<shortest_distance:
                     shortest_distance=distance[n]
                     closest_asteroid=n
-                    closest_asteroids[4] = closest_asteroids[3]
-                    closest_asteroids[3] = closest_asteroids[2]
-                    closest_asteroids[2] = closest_asteroids[1]
-                    closest_asteroids[1] = closest_asteroids[0]
-                    closest_asteroids[0] = closest_asteroid
+                    # Lester's Multitasking
+                elif distance[n] < roe_zone and input_data['asteroids'][n]['size'] < 3:
+                    inrange_distance[astrange] = distance[n]
+                    inrange_asteroid[astrange] = n
+                    astrange += 1
 
-                elif distance[n]<distance[closest_asteroids[1]]:
-                    closest_asteroids[4] = closest_asteroids[3]
-                    closest_asteroids[3] = closest_asteroids[2]
-                    closest_asteroids[2] = closest_asteroids[1]
-                    closest_asteroids[1] = n
-                elif distance[n] < distance[closest_asteroids[2]]:
-                    closest_asteroids[4] = closest_asteroids[3]
-                    closest_asteroids[3] = closest_asteroids[2]
-                    closest_asteroids[2] = n
-                elif distance[n] < distance[closest_asteroids[3]]:
-                    closest_asteroids[4] = closest_asteroids[3]
-                    closest_asteroids[3] = n
-                elif distance[n] < distance[closest_asteroids[4]]:
-                    closest_asteroids[4] = n
+                    # Lester's Orientation Calculator
+
+                    for m in range(1, astrange):
+                        ab2[m] = input_data['asteroids'][closest_asteroid]['position'][1] - ship.center_y
+                        lr2[m] = input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x
+                        op2[m] = input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x
+                        hyp2[m] = inrange_distance[m]
+                        s_rangle_inrange[m] = self.rangle(op2[m], hyp2[m], ab2[m], lr2[m])
+
+                        orientation2[m] = abs(ship.angle - s_rangle_inrange[m])
             abovebelow_array=numpy.zeros(5)
             hypotenuse_array=numpy.zeros(5)
             opposite_array=numpy.zeros(5)
@@ -204,13 +212,13 @@ class FuzzyController(ControllerBase):
             """
             This is the master if function in which it determines which behavior mode to fall into 
             """
-            if ship.respawn_time_left>0:
+            if ship.respawn_time_left > 0:
                 if shortest_distance < 55 + (5 * clast_size):
-                    if orientation>120:
-                        ship.thrust=ship.thrust_range[1]
-                    elif orientation>70 and orientation<110 and shortest_distance<45:
+                    if orientation > 120:
+                        ship.thrust = ship.thrust_range[1]
+                    elif orientation > 70 and orientation < 110 and shortest_distance < 45:
                         ship.thrust = 0
-                        ship.turn_rate=180
+                        ship.turn_rate = 180
             elif total_velocity>1.5:
 
                 """
@@ -231,19 +239,19 @@ class FuzzyController(ControllerBase):
                     print('something wonky afoot')
                     clast_size = input_data['asteroids'][closest_asteroid]['size']
 
-            elif shortest_distance < 55 + (5 * clast_size):
+            elif shortest_distance < 60 + (5 * clast_size):
                 """Evasive Manuevers, I think we could expand this to considering the closest three 
                     asteroids and fuzzily deciding which direction to flee in
     
                     for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
                     behave accordingly """
                 if orientation>120:
-                    ship.thrust=ship.thrust_range[0]
-                elif orientation>70 and orientation<120 and shortest_distance<45:
+                    ship.thrust=ship.thrust_range[1]
+                elif orientation>60 and orientation<120 and shortest_distance<45:
                     ship.thrust = 0
                     ship.turn_rate=180
                 else:
-                    ship.thrust = ship.thrust_range[0]
+                    ship.thrust=ship.thrust_range[0]
                 """
                 Egde Clearing is Awesome, Needs to be adapted for search and destroy
                 elif ship.center_x>700 or ship.center_x<100 or ship.center_y>500 or ship.center_y<100:
@@ -256,7 +264,16 @@ class FuzzyController(ControllerBase):
                 else:
                     ship.turn_rate=-180
                 """
-            elif input_data['time']>0 and shortest_distance>(70 + (50 * clast_size)):
+            elif ship.center_x > 650 or ship.center_x < 150 or ship.center_y > 450 or ship.center_y < 150:
+                turn = self.leftright(normal_shipangle, normal_cangle)
+                center_orientation = abs(ship.angle - anglefromcenter)
+                if center_orientation < 10:
+                    ship.thrust = ship.thrust_range[1]
+                elif turn == 0:
+                    ship.turn_rate = 180
+                else:
+                    ship.turn_rate = -180
+            elif input_data['time']>0 and shortest_distance>(60 + (70 * clast_size)):
                 if leftright == 0:
                     ship.turn_rate = 180
                     ship.thrust = ship.thrust_range[1]
@@ -278,30 +295,17 @@ class FuzzyController(ControllerBase):
                 else:
                     ship.turn_rate = -90
 
-            self.wack += 6
+            self.wack += 6000
 
-            if orientation < 2:
-
-                if self.wack > hypotenuse/astnum:
-                    self.wack = 0
-                    ship.shoot()
-            else:
-                counter=0
-                for n in range(0,5):
-                    if orientation_array[n] < 2:
-                        counter=counter+1
-                if counter>0:
-                    if self.wack > hypotenuse/ astnum:
+            for l in range(0, len(orientation2)):
+                # print(orientation2)
+                if orientation < 2 or orientation2[l] < 4:
+                    # if orientation2[l] < 100:
+                    # print(orientation2[l])
+                    # if orientation2[l] < 10:
+                    # print('TRICK SHOT!')
+                    if self.wack > hypotenuse ** 2:
                         self.wack = 0
                         ship.shoot()
-            """
-            elif len(input_data['asteroids']) > 3:
-    
-            self.tr_sim.input['asteroid_num'] = len(input_data['asteroids'])
-            self.tr_sim.compute()
-            ship.turn_rate = self.tr_sim.output['TR']
-               
-            else:
-            ship.turn_rate = 40"""
 
 
