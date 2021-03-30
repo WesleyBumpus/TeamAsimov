@@ -282,7 +282,7 @@ class FuzzyController(ControllerBase):
                 elif ship.center_x > 650 or ship.center_x < 150 or ship.center_y > 450 or ship.center_y < 150:
                     turn = self.leftright(normal_shipangle, normal_cangle)
                     center_orientation = abs(ship.angle - anglefromcenter)
-                    if center_orientation < 10:
+                    if center_orientation < 180:
                         ship.thrust = ship.thrust_range[1]
                     elif turn == 0:
                         ship.turn_rate = 180
