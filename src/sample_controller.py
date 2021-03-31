@@ -221,7 +221,7 @@ class FuzzyController(ControllerBase):
 
             else:
 
-                if total_velocity > 1.5:  # Braking Speed Determinant
+                if total_velocity > 1.3:  # Braking Speed Determinant
 
                     """
                     Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
@@ -243,16 +243,17 @@ class FuzzyController(ControllerBase):
                         print('something wonky afoot')
                         clast_size = input_data['asteroids'][closest_asteroid]['size']
 
-                elif shortest_distance < 45 + (10 * clast_size):
+                elif shortest_distance < 50 + (12 * clast_size):
                     """Evasive Manuevers, I think we could expand this to considering the closest three 
                         asteroids and fuzzily deciding which direction to flee in
     
                         for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
                         behave accordingly """
-                    if orientation > 120:
+                    if orientation > 110:
                         ship.thrust = ship.thrust_range[1]
                     elif orientation > 70 and orientation < 110 and shortest_distance < 45:
                         ship.thrust = 0
+
                     else:
                         ship.thrust = ship.thrust_range[0]
 
