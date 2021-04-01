@@ -22,6 +22,7 @@ class FuzzyController(ControllerBase):
         import skfuzzy as fuzz
         import skfuzzy.control as ctrl
         import numpy
+        print('round Started')
         self.hi = 30
         self.wack = 0
         """
@@ -126,19 +127,19 @@ class FuzzyController(ControllerBase):
                                     consequent=Target_F1['Very High'], label='Target_F1_rule1')
 
         Target_F1_rule2 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Close'] & f_orientation_size1['In Sights']),
-                                    consequent=Target_F1['Very High'], label='Target_F1_rule2')
+                                    consequent=Target_F1['High'], label='Target_F1_rule2')
 
         Target_F1_rule3 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Far'] & f_orientation_size1['In Sights']),
-                                    consequent=Target_F1['Very High'], label='Target_F1_rule3')
+                                    consequent=Target_F1['Medium'], label='Target_F1_rule3')
 
         Target_F1_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Imminent'] & f_orientation_size1['Close']),
                                     consequent=Target_F1['Very High'], label='Target_F1_rule4')
 
         Target_F1_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Close'] & f_orientation_size1['Close']),
-                                    consequent=Target_F1['Very High'], label='Target_F1_rule5')
+                                    consequent=Target_F1['High'], label='Target_F1_rule5')
 
         Target_F1_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Far'] & f_orientation_size1['Close']),
-                                    consequent=Target_F1['High'], label='Target_F1_rule6')
+                                    consequent=Target_F1['Medium'], label='Target_F1_rule6')
 
         Target_F1_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Imminent'] & f_orientation_size1['Far']),
                                     consequent=Target_F1['Very High'], label='Target_F1_rule7')
@@ -187,22 +188,22 @@ class FuzzyController(ControllerBase):
                                     consequent=Target_F2['Medium'], label='Target_F2_rule3')
 
         Target_F2_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Imminent'] & f_orientation_size2['Close']),
-                                    consequent=Target_F2['High'], label='Target_F2_rule4')
+                                    consequent=Target_F2['Very High'], label='Target_F2_rule4')
 
         Target_F2_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Close'] & f_orientation_size2['Close']),
                                     consequent=Target_F2['High'], label='Target_F2_rule5')
 
         Target_F2_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Far'] & f_orientation_size2['Close']),
-                                    consequent=Target_F2['Low'], label='Target_F2_rule6')
+                                    consequent=Target_F2['Medium'], label='Target_F2_rule6')
 
         Target_F2_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Imminent'] & f_orientation_size2['Far']),
-                                    consequent=Target_F2['High'], label='Target_F2_rule7')
+                                    consequent=Target_F2['Very High'], label='Target_F2_rule7')
 
         Target_F2_rule8 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Close'] & f_orientation_size2['Far']),
-                                    consequent=Target_F2['Medium'], label='Target_F2_rule8')
+                                    consequent=Target_F2['High'], label='Target_F2_rule8')
 
         Target_F2_rule9 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Far'] & f_orientation_size2['Far']),
-                                    consequent=Target_F2['Low'], label='Target_F2_rule9')
+                                    consequent=Target_F2['Medium'], label='Target_F2_rule9')
 
         Target_F2_system = ctrl.ControlSystem(rules=[Target_F2_rule1, Target_F2_rule2, Target_F2_rule3, Target_F2_rule4,
                                                      Target_F2_rule5, Target_F2_rule6, Target_F2_rule7, Target_F2_rule8,
@@ -231,28 +232,28 @@ class FuzzyController(ControllerBase):
                                     consequent=Target_F3['Very High'], label='Target_F3_rule1')
 
         Target_F3_rule2 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Close'] & f_orientation_size3['In Sights']),
-                                    consequent=Target_F3['Low'], label='Target_F3_rule2')
+                                    consequent=Target_F3['High'], label='Target_F3_rule2')
 
         Target_F3_rule3 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Far'] & f_orientation_size3['In Sights']),
-                                    consequent=Target_F3['Low'], label='Target_F3_rule3')
+                                    consequent=Target_F3['Medium'], label='Target_F3_rule3')
 
         Target_F3_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Imminent'] & f_orientation_size3['Close']),
-                                    consequent=Target_F3['Medium'], label='Target_F3_rule4')
+                                    consequent=Target_F3['Very High'], label='Target_F3_rule4')
 
         Target_F3_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Close'] & f_orientation_size3['Close']),
-                                    consequent=Target_F3['Low'], label='Target_F3_rule5')
+                                    consequent=Target_F3['High'], label='Target_F3_rule5')
 
         Target_F3_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Far'] & f_orientation_size3['Close']),
-                                    consequent=Target_F3['Low'], label='Target_F3_rule6')
+                                    consequent=Target_F3['Medium'], label='Target_F3_rule6')
 
         Target_F3_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Imminent'] & f_orientation_size3['Far']),
-                                    consequent=Target_F3['Low'], label='Target_F3_rule7')
+                                    consequent=Target_F3['Very High'], label='Target_F3_rule7')
 
         Target_F3_rule8 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Close'] & f_orientation_size3['Far']),
-                                    consequent=Target_F3['Low'], label='Target_F3_rule8')
+                                    consequent=Target_F3['High'], label='Target_F3_rule8')
 
         Target_F3_rule9 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Far'] & f_orientation_size3['Far']),
-                                    consequent=Target_F3['Very Low'], label='Target_F3_rule9')
+                                    consequent=Target_F3['Medium'], label='Target_F3_rule9')
 
         Target_F3_system = ctrl.ControlSystem(rules=[Target_F3_rule1, Target_F3_rule2, Target_F3_rule3, Target_F3_rule4,
                                                      Target_F3_rule5, Target_F3_rule6, Target_F3_rule7, Target_F3_rule8,
@@ -281,25 +282,25 @@ class FuzzyController(ControllerBase):
                                     consequent=Target_F4['Very High'], label='Target_F4_rule1')
 
         Target_F4_rule2 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Close'] & f_orientation_size4['In Sights']),
-                                    consequent=Target_F4['Very Low'], label='Target_F4_rule2')
+                                    consequent=Target_F4['High'], label='Target_F4_rule2')
 
         Target_F4_rule3 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Far'] & f_orientation_size4['In Sights']),
                                     consequent=Target_F4['Very Low'], label='Target_F4_rule3')
 
         Target_F4_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Imminent'] & f_orientation_size4['Close']),
-                                    consequent=Target_F4['Low'], label='Target_F4_rule4')
+                                    consequent=Target_F4['High'], label='Target_F4_rule4')
 
         Target_F4_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Close'] & f_orientation_size4['Close']),
-                                    consequent=Target_F4['Very Low'], label='Target_F4_rule5')
+                                    consequent=Target_F4['Medium'], label='Target_F4_rule5')
 
         Target_F4_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Far'] & f_orientation_size4['Close']),
                                     consequent=Target_F4['Very Low'], label='Target_F4_rule6')
 
         Target_F4_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Imminent'] & f_orientation_size4['Far']),
-                                    consequent=Target_F4['Very Low'], label='Target_F4_rule7')
+                                    consequent=Target_F4['High'], label='Target_F4_rule7')
 
         Target_F4_rule8 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Close'] & f_orientation_size4['Far']),
-                                    consequent=Target_F4['Very Low'], label='Target_F4_rule8')
+                                    consequent=Target_F4['Low'], label='Target_F4_rule8')
 
         Target_F4_rule9 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Far'] & f_orientation_size4['Far']),
                                     consequent=Target_F4['Very Low'], label='Target_F4_rule9')
@@ -323,7 +324,7 @@ class FuzzyController(ControllerBase):
         import math
         import numpy
 
-        roe_zone = 250  # Max distance at which the autotargeting system will engage
+        roe_zone = 200  # Max distance at which the autotargeting system will engage
         roe_size = 1  # Max asteroid size the autotargeting system will engage
         astnum = len(input_data['asteroids'])
         if astnum > 0:
@@ -411,16 +412,19 @@ class FuzzyController(ControllerBase):
                     self.Target_F3_sim.input['f_hypotenuse_size3'] = inrange_distance[m]
                     self.Target_F3_sim.compute()
                     Favorability[m] = self.Target_F3_sim.output['Target_F3']
+                    Favorability[m] = Favorability[m] + 0.01
                 elif inrange_size[m]==2:
                     self.Target_F2_sim.input['f_orientation_size2'] = orientation2[m]
                     self.Target_F2_sim.input['f_hypotenuse_size2'] = inrange_distance[m]
                     self.Target_F2_sim.compute()
                     Favorability[m] = self.Target_F2_sim.output['Target_F2']
+                    Favorability[m] = Favorability[m] + 0.03
                 elif inrange_size[m]==1:
                     self.Target_F1_sim.input['f_orientation_size1'] = orientation2[m]
                     self.Target_F1_sim.input['f_hypotenuse_size1'] = inrange_distance[m]
                     self.Target_F1_sim.compute()
                     Favorability[m] = self.Target_F1_sim.output['Target_F1']
+                    Favorability[m]=Favorability[m]+0.05
                 if m==0:
                     if Favorability[m]>0:
                         Target=m
@@ -428,8 +432,7 @@ class FuzzyController(ControllerBase):
                 elif Favorability[m]==numpy.max(Favorability[m]):
                     Target = m
                     bloop = bloop + 1
-            if bloop==0:
-                print('whoops')
+
             abovebelow = input_data['asteroids'][closest_asteroid]['position'][1] - ship.center_y
             leftright = input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x
             opposite = (input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x)
@@ -437,11 +440,13 @@ class FuzzyController(ControllerBase):
             s_rangle = self.rangle(opposite, hypotenuse, abovebelow, leftright)
             orientation = abs(ship.angle - s_rangle)
             if bloop>0:
-                Target_orientation=orientation2[Target]
-                Target_angle=s_rangle_inrange[Target]
-                Target_Distance=inrange_distance[Target]
-                Target_size=inrange_size[Target]
-                Target_Favorability=Favorability[m]
+                if inrange_size[Target]<4:
+                    Target_orientation=orientation2[Target]
+                    Target_angle=s_rangle_inrange[Target]
+                    Target_Distance=inrange_distance[Target]
+                    Target_size=inrange_size[Target]
+                    Target_Favorability=Favorability[m]
+
             elif bloop==0:
                 Target_orientation = orientation
                 Target_angle = s_rangle
@@ -476,7 +481,7 @@ class FuzzyController(ControllerBase):
 
             else:
 
-                if total_velocity > 0.8 + (shortest_distance/250):  # Braking Speed Determinant
+                if total_velocity > 1 + (shortest_distance/210):  # Braking Speed Determinant
 
                     """
                     Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
@@ -487,42 +492,37 @@ class FuzzyController(ControllerBase):
                     if travel_angle == 0:
                         pass
                     elif t_orientation > 60:
-                        print('braking engaged')
-                        print(t_orientation)
                         ship.thrust = ship.thrust_range[1]
                     elif t_orientation < 60:
-                        print('braking engaged')
-                        print(t_orientation)
                         ship.thrust = ship.thrust_range[0]
                     else:
                         print('something wonky afoot')
 
-                elif shortest_distance < 40 + (18 * clast_size):
+                elif shortest_distance < 45 + (15 * clast_size):
                     """Evasive Manuevers, I think we could expand this to considering the closest three 
                         asteroids and fuzzily deciding which direction to flee in
     
                         for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
                         behave accordingly """
                     dodge_counter=1
-                    if orientation > 100:
+                    if orientation > 90:
                         ship.thrust = ship.thrust_range[1]
-                    elif orientation > 70 and orientation < 120 and shortest_distance < 50:
+                    elif orientation > 90 and orientation < 90:
                         ship.thrust = 0
-                        ship.thrust = ship.thrust_range[0]
                     else:
                         ship.thrust = ship.thrust_range[0]
 
                     if leftright_dodge == 0 or leftright_dodge == 1:
-                        if leftright_dodge == 0 and orientation > 5:
+                        if leftright_dodge == 0 and orientation > 1:
                             ship.turn_rate = 180
-                        elif leftright_dodge == 0 and orientation <= 5:
+                        elif leftright_dodge == 0 and orientation <= 1:
                             ship.turn_rate = 90
-                        elif leftright_dodge == 1 and orientation > 5:
+                        elif leftright_dodge == 1 and orientation > 1:
                             ship.turn_rate = -180
                         else:
                             ship.turn_rate = -90
 
-                elif ship.center_x > 650 or ship.center_x < 150 or ship.center_y > 450 or ship.center_y < 150:
+                elif ship.center_x > 600 or ship.center_x < 200 or ship.center_y > 400 or ship.center_y < 200:
                     turn = self.leftright(normal_shipangle, normal_cangle)
                     center_orientation = abs(ship.angle - anglefromcenter)
                     if center_orientation < 60:
@@ -542,11 +542,11 @@ class FuzzyController(ControllerBase):
                     ship.thrust = ship.thrust_range[1]
 
                 if leftright_target == 0 or leftright_target == 1:
-                    if leftright_target == 0 and Target_orientation > 5:
+                    if leftright_target == 0 and Target_orientation > 3:
                         ship.turn_rate = 180
-                    elif leftright_target == 0 and Target_orientation <= 5:
+                    elif leftright_target == 0 and Target_orientation <= 3:
                         ship.turn_rate = 90
-                    elif leftright_target == 1 and Target_orientation > 5:
+                    elif leftright_target == 1 and Target_orientation > 3:
                         ship.turn_rate = -180
                     else:
                         ship.turn_rate = -90
@@ -554,18 +554,20 @@ class FuzzyController(ControllerBase):
                 """
                 Shooting Mechanism
                 """
-                self.wack += 2000  # wack increases until it reaches a fire threshold
+                self.wack += 1000  # wack increases until it reaches a fire threshold
 
                 for l in range(0, len(orientation2)):  # runs this once for every asteroid in the ROE zone.
                     # print(orientation2)
-                    if orientation < 2 or orientation2[l] < 4:  #
+                    if orientation < 1 or orientation2[l] < 1:  #
                         # if orientation2[l] < 100:
                         # print(orientation2[l])
                         # if orientation2[l] < 4:
                         # print('TRICK SHOT!')
                         # ship.shoot()
-                        if Target_Favorability<0.1 and Target_size==4 and astnum>50 and dodge_counter==0:
+                        """
+                        if Target_Favorability<0.1 and Target_size==4 and astnum>50:
                             pass
-                        elif self.wack > Target_Distance ** 2:
+                        """
+                        if self.wack > Target_Distance ** 2:
                             self.wack = 0
                             ship.shoot()
