@@ -23,6 +23,7 @@ if __name__ == "__main__":
         # Instantiate the environment
         game = FuzzyAsteroidGame(settings=settings)
         score = game.run(controller=FuzzyController())
+        print(score.asteroids_hit)
 
     else:
         # Run the Asteroids game with no

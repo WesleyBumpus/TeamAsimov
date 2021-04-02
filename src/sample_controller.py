@@ -22,7 +22,6 @@ class FuzzyController(ControllerBase):
         import skfuzzy as fuzz
         import skfuzzy.control as ctrl
         import numpy
-        print('round Started')
         self.hi = 30
         self.wack = 0
         """
@@ -323,7 +322,6 @@ class FuzzyController(ControllerBase):
         import skfuzzy.control as ctrl
         import math
         import numpy
-
         roe_zone = 200  # Max distance at which the autotargeting system will engage
         roe_size = 1  # Max asteroid size the autotargeting system will engage
         astnum = len(input_data['asteroids'])
@@ -412,19 +410,16 @@ class FuzzyController(ControllerBase):
                     self.Target_F3_sim.input['f_hypotenuse_size3'] = inrange_distance[m]
                     self.Target_F3_sim.compute()
                     Favorability[m] = self.Target_F3_sim.output['Target_F3']
-                    Favorability[m] = Favorability[m] + 0.01
                 elif inrange_size[m]==2:
                     self.Target_F2_sim.input['f_orientation_size2'] = orientation2[m]
                     self.Target_F2_sim.input['f_hypotenuse_size2'] = inrange_distance[m]
                     self.Target_F2_sim.compute()
                     Favorability[m] = self.Target_F2_sim.output['Target_F2']
-                    Favorability[m] = Favorability[m] + 0.03
                 elif inrange_size[m]==1:
                     self.Target_F1_sim.input['f_orientation_size1'] = orientation2[m]
                     self.Target_F1_sim.input['f_hypotenuse_size1'] = inrange_distance[m]
                     self.Target_F1_sim.compute()
                     Favorability[m] = self.Target_F1_sim.output['Target_F1']
-                    Favorability[m]=Favorability[m]+0.05
                 if m==0:
                     if Favorability[m]>0:
                         Target=m
@@ -447,6 +442,12 @@ class FuzzyController(ControllerBase):
                     Target_size=inrange_size[Target]
                     Target_Favorability=Favorability[m]
 
+                else:
+                    Target_orientation = orientation
+                    Target_angle = s_rangle
+                    Target_Distance = shortest_distance
+                    Target_size = input_data['asteroids'][closest_asteroid]['size']
+                    Target_Favorability = 0
             elif bloop==0:
                 Target_orientation = orientation
                 Target_angle = s_rangle
@@ -481,7 +482,7 @@ class FuzzyController(ControllerBase):
 
             else:
 
-                if total_velocity > 1 + (shortest_distance/210):  # Braking Speed Determinant
+                if total_velocity > 1 + (shortest_distance/260):  # Braking Speed Determinant
 
                     """
                     Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
@@ -554,7 +555,7 @@ class FuzzyController(ControllerBase):
                 """
                 Shooting Mechanism
                 """
-                self.wack += 1000  # wack increases until it reaches a fire threshold
+                self.wack += 4000  # wack increases until it reaches a fire threshold
 
                 for l in range(0, len(orientation2)):  # runs this once for every asteroid in the ROE zone.
                     # print(orientation2)

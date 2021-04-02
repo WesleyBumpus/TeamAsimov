@@ -3,38 +3,41 @@ import random
 from deap import base
 from deap import creator
 from deap import tools
-import pandas as pd
+from typing import Tuple, Dict, Any
+from src.Mutation import mutSet
 import skfuzzy as fuzz
 import skfuzzy.control as ctrl
 import numpy
 from src.sample_controller import FuzzyController
 from sample_score import SampleScore
+from fuzzy_asteroids.fuzzy_controller import ControllerBase, SpaceShip
 
 if __name__ == "__main__":
     # Available settings
     settings = {
+        "graphics_on": True,
+        "sound_on": False,
         # "frequency": 60,
+        "real_time_multiplier": 200,
         # "lives": 3,
-        # "prints": False,
+        # "prints": True,
+        "allow_key_presses": False
     }
 
     # To use the controller within the context of a training solution
     # It is important to not create a new instance of the environment everytime
     game = TrainerEnvironment(settings=settings)
-    """
-    Created on Sat Feb 13 22:18:12 2021
-
-    @author: Team Asimov
-    """
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)
+
     toolbox = base.Toolbox()
+
     # Attribute generator
     #                      define 'attr_bool' to be an attribute ('gene')
     #                      which corresponds to integers sampled uniformly
     #                      from the range [0,1] (i.e. 0 or 1 with equal
     #                      probability)
-    toolbox.register("attr_output", random.random())
+    toolbox.register("attr_output", random.randint, 1, 1000)
 
     # Structure initializers
     #                         define 'individual' to be an individual
@@ -47,335 +50,615 @@ if __name__ == "__main__":
 
 
     # the goal ('fitness') function to be maximized
-    def evalTip(individual):
+    def evalscore(individual):
 
-        # Defines a fuzzy inference system for "Tip"
+        class FuzzyController(ControllerBase):
+            """
+            Class to be used by UC Fuzzy Challenge competitors to create a fuzzy logic controller
+            for the Asteroid Smasher game.
+            Note: Your fuzzy controller class can be called anything, but must inherit from the
+            the ``ControllerBase`` class (imported above)
+            Users must define the following:
+            1. __init__()
+            2. actions(self, ship: SpaceShip, input_data: Dict[str, Tuple])
+            By defining these interfaces, this class will work correctly
+            """
 
-        temp = ctrl.Antecedent(numpy.arange(0, 11, 1), 'temp')
-        taste = ctrl.Antecedent(numpy.arange(0, 11, 1), 'price')
-        price = ctrl.Antecedent(numpy.arange(0, 11, 1), 'taste')
-        quality = ctrl.Consequent(numpy.arange(-6, 16, 1), 'quality')
+            def __init__(self):
+                """
+                Create your fuzzy logic controllers and other objects here
+                """
+                import skfuzzy as fuzz
+                import skfuzzy.control as ctrl
+                import numpy
+                self.hi = 30
+                self.wack = 0
+                self.roe_zone=individual[0]/1000*300
+                """
+                Checking the asteroid angle relative to the ship
+                """
 
-        names = ['low', 'avg', 'high']
-        temp.automf(names=names)
-        taste.automf(names=names)
-        price.automf(names=names)
+                def r_angle(opposite, hypotenuse, abovebelow, leftright):
+                    import math
+                    if abovebelow > 0:
+                        angle = -1 * (math.degrees(math.asin(opposite / hypotenuse)))
+                    elif abovebelow < 0 and leftright < 0:
+                        angle = 180 + (math.degrees(math.asin(opposite / hypotenuse)))
+                    elif abovebelow < 0 and leftright > 0:
+                        angle = -180 + (math.degrees(math.asin(opposite / hypotenuse)))
+                    else:
+                        angle = 0
+                    return angle
 
-        quality['low'] = fuzz.trimf(quality.universe, [-5, 0, 5])
-        quality['avg'] = fuzz.trimf(quality.universe, [0, 5, 10])
-        quality['high'] = fuzz.trimf(quality.universe, [5, 10, 15])
+                self.rangle = r_angle
+                """
+                Defensively shooting at an approaching asteroid, 
+                I think for defensive shooting we could have it intentionally over shoot by turning too fast 
+                as to simulate leading the shot
+                """
+                """
+                Angle Normalizer if the difference is greater than 180 or less
+                """
 
-        rule1 = ctrl.Rule((temp['low'] & price['low'] & taste['low']) |
-                          (temp['low'] & price['avg'] & taste['low']) |
-                          (temp['low'] & price['high'] & taste['low']) |
-                          (temp['avg'] & price['low'] & taste['low']) |
-                          (temp['high'] & price['low'] & taste['low']) |
-                          (temp['avg'] & price['avg'] & taste['low']) |
-                          (temp['avg'] & price['high'] & taste['low']) |
-                          (temp['high'] & price['avg'] & taste['low']) |
-                          (temp['low'] & price['low'] & taste['avg']) |
-                          (temp['low'] & price['avg'] & taste['avg']) |
-                          (temp['avg'] & price['low'] & taste['avg']),
-                          quality['low'])
+                def norm(angle):
+                    if angle > 0:
+                        new_angle = angle
+                    elif angle < 0:
+                        new_angle = 360 + angle
+                    else:
+                        new_angle = 0
+                    return new_angle
 
-        rule2 = ctrl.Rule((temp['high'] & price['high'] & taste['low']) |
-                          (temp['avg'] & price['avg'] & taste['avg']) |
-                          (temp['low'] & price['high'] & taste['avg']) |
-                          (temp['high'] & price['low'] & taste['avg']) |
-                          (temp['low'] & price['low'] & taste['high']) |
-                          (temp['low'] & price['avg'] & taste['high']) |
-                          (temp['low'] & price['high'] & taste['high']) |
-                          (temp['avg'] & price['low'] & taste['high']) |
-                          (temp['high'] & price['low'] & taste['high']),
-                          quality['avg'])
+                self.norm = norm
+                """
+                Function That Tells You Whether Rotating Left or Right to the asteroid is faster
+                0 is left, 1 is right
+                use normalized angles
+                """
 
-        rule3 = ctrl.Rule((temp['avg'] & price['high'] & taste['avg']) |
-                          (temp['high'] & price['avg'] & taste['avg']) |
-                          (temp['high'] & price['high'] & taste['avg']) |
-                          (temp['avg'] & price['avg'] & taste['high']) |
-                          (temp['avg'] & price['high'] & taste['high']) |
-                          (temp['high'] & price['avg'] & taste['high']) |
-                          (temp['high'] & price['high'] & taste['high']),
-                          quality['high'])
+                def leftrightcheck(shipangle, astangle):
 
-        quality_ctrl = ctrl.ControlSystem([rule1, rule2, rule3])
-        quality = ctrl.ControlSystemSimulation(quality_ctrl)
+                    diff = shipangle - astangle
+                    absdiff = abs(diff)
+                    if absdiff < 180 and diff > 0:
+                        leftright = 1
+                    elif absdiff < 180 and diff < 0:
+                        leftright = 0
+                    elif absdiff > 180 and diff > 0:
+                        leftright = 0
+                    elif absdiff > 180 and diff < 0:
+                        leftright = 1
+                    else:
+                        leftright = 0
+                        print('problem in left right checker')
+                    return leftright
+
+                self.leftright = leftrightcheck
+
+                """
+                Chaffe Clearing Rotation Controller
+                """
+
+                asteroid_num = ctrl.Antecedent(numpy.arange(0, 61, 1), 'asteroid_num')
+                names = ['low', 'avg', 'high']
+                asteroid_num.automf(names=names)
+                TR = ctrl.Consequent(numpy.arange(-91, 271, 1), 'TR')
+                TR.automf(names=names)
+                tr_rule0 = ctrl.Rule(antecedent=(asteroid_num['low']), consequent=TR['low'], label='tr_rule_0')
+                tr_rule1 = ctrl.Rule(antecedent=(asteroid_num['avg']), consequent=TR['avg'], label='tr_rule_1')
+                tr_rule2 = ctrl.Rule(antecedent=(asteroid_num['high']), consequent=TR['high'], label='tr_rule_2')
+                tr_system = ctrl.ControlSystem(rules=[tr_rule0, tr_rule1, tr_rule2])
+                self.tr_sim = ctrl.ControlSystemSimulation(tr_system)
+                """
+                Asteroid Selecting Fuzzy System
+                For simplicity of code (Not necessarily Compactness I'm going to code one fuzzy system for each size class)
+                Finds Favorability 
+                """
+                # For Size 1
+                f_orientation_size1 = ctrl.Antecedent(numpy.arange(-91, 271, 1), 'f_orientation_size1')
+                f_orientation_size1['In Sights'] = fuzz.trimf(f_orientation_size1.universe, [-15, 0, 15])
+                f_orientation_size1['Close'] = fuzz.trimf(f_orientation_size1.universe, [15, 45, 75])
+                f_orientation_size1['Far'] = fuzz.trimf(f_orientation_size1.universe, [75, 180, 285])
+                # shortest_distance < 50 + (12 * clast_size)
+                f_hypotenuse_size1 = ctrl.Antecedent(numpy.arange(-81, 261, 1), 'f_hypotenuse_size1')
+                f_hypotenuse_size1['Imminent'] = fuzz.trimf(f_hypotenuse_size1.universe, [-80, 0, 80])
+                f_hypotenuse_size1['Close'] = fuzz.trimf(f_hypotenuse_size1.universe, [80, 140, 200])
+                f_hypotenuse_size1['Far'] = fuzz.trimf(f_hypotenuse_size1.universe, [140, 200, 260])
+                # Target_F
+                Target_F1 = ctrl.Consequent(numpy.arange(-26, 126, 1), 'Target_F1')
+                Target_F1['Very Low'] = fuzz.trimf(Target_F1.universe, [-25, 0, 25])
+                Target_F1['Low'] = fuzz.trimf(Target_F1.universe, [0, 25, 50])
+                Target_F1['Medium'] = fuzz.trimf(Target_F1.universe, [25, 50, 75])
+                Target_F1['High'] = fuzz.trimf(Target_F1.universe, [50, 75, 100])
+                Target_F1['Very High'] = fuzz.trimf(Target_F1.universe, [75, 100, 125])
+
+                Target_F1_rule1 = ctrl.Rule(
+                    antecedent=(f_hypotenuse_size1['Imminent'] & f_orientation_size1['In Sights']),
+                    consequent=Target_F1['Very High'], label='Target_F1_rule1')
+
+                Target_F1_rule2 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Close'] & f_orientation_size1['In Sights']),
+                                            consequent=Target_F1['High'], label='Target_F1_rule2')
+
+                Target_F1_rule3 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Far'] & f_orientation_size1['In Sights']),
+                                            consequent=Target_F1['Medium'], label='Target_F1_rule3')
+
+                Target_F1_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Imminent'] & f_orientation_size1['Close']),
+                                            consequent=Target_F1['Very High'], label='Target_F1_rule4')
+
+                Target_F1_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Close'] & f_orientation_size1['Close']),
+                                            consequent=Target_F1['High'], label='Target_F1_rule5')
+
+                Target_F1_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Far'] & f_orientation_size1['Close']),
+                                            consequent=Target_F1['Medium'], label='Target_F1_rule6')
+
+                Target_F1_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Imminent'] & f_orientation_size1['Far']),
+                                            consequent=Target_F1['Very High'], label='Target_F1_rule7')
+
+                Target_F1_rule8 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Close'] & f_orientation_size1['Far']),
+                                            consequent=Target_F1['High'], label='Target_F1_rule8')
+
+                Target_F1_rule9 = ctrl.Rule(antecedent=(f_hypotenuse_size1['Far'] & f_orientation_size1['Far']),
+                                            consequent=Target_F1['Medium'], label='Target_F1_rule9')
+
+                Target_F1_system = ctrl.ControlSystem(
+                    rules=[Target_F1_rule1, Target_F1_rule2, Target_F1_rule3, Target_F1_rule4,
+                           Target_F1_rule5, Target_F1_rule6, Target_F1_rule7, Target_F1_rule8,
+                           Target_F1_rule9])
+                self.Target_F1_sim = ctrl.ControlSystemSimulation(Target_F1_system)
+                """
+                Target_F1_sim.input['f_orientation_size1'] = 45
+                Target_F1_sim.input['f_hypotenuse_size1'] = 100
+                Target_F1_sim.compute()
+                Favorability = Target_F1_sim.output['Target_F1']
+                """
+                # For Size 2
+                f_orientation_size2 = ctrl.Antecedent(numpy.arange(-91, 271, 1), 'f_orientation_size2')
+                f_orientation_size2['In Sights'] = fuzz.trimf(f_orientation_size2.universe, [-15, 0, 15])
+                f_orientation_size2['Close'] = fuzz.trimf(f_orientation_size2.universe, [15, 45, 75])
+                f_orientation_size2['Far'] = fuzz.trimf(f_orientation_size2.universe, [75, 180, 285])
+                # shortest_distance < 50 + (12 * clast_size)
+                f_hypotenuse_size2 = ctrl.Antecedent(numpy.arange(-81, 261, 1), 'f_hypotenuse_size2')
+                f_hypotenuse_size2['Imminent'] = fuzz.trimf(f_hypotenuse_size2.universe, [-80, 0, 80])
+                f_hypotenuse_size2['Close'] = fuzz.trimf(f_hypotenuse_size2.universe, [80, 140, 200])
+                f_hypotenuse_size2['Far'] = fuzz.trimf(f_hypotenuse_size2.universe, [140, 200, 260])
+                # Target_F
+                Target_F2 = ctrl.Consequent(numpy.arange(-26, 126, 1), 'Target_F2')
+                Target_F2['Very Low'] = fuzz.trimf(Target_F2.universe, [-25, 0, 25])
+                Target_F2['Low'] = fuzz.trimf(Target_F2.universe, [0, 25, 50])
+                Target_F2['Medium'] = fuzz.trimf(Target_F2.universe, [25, 50, 75])
+                Target_F2['High'] = fuzz.trimf(Target_F2.universe, [50, 75, 100])
+                Target_F2['Very High'] = fuzz.trimf(Target_F2.universe, [75, 100, 125])
+
+                Target_F2_rule1 = ctrl.Rule(
+                    antecedent=(f_hypotenuse_size2['Imminent'] & f_orientation_size2['In Sights']),
+                    consequent=Target_F2['Very High'], label='Target_F2_rule1')
+
+                Target_F2_rule2 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Close'] & f_orientation_size2['In Sights']),
+                                            consequent=Target_F2['High'], label='Target_F2_rule2')
+
+                Target_F2_rule3 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Far'] & f_orientation_size2['In Sights']),
+                                            consequent=Target_F2['Medium'], label='Target_F2_rule3')
+
+                Target_F2_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Imminent'] & f_orientation_size2['Close']),
+                                            consequent=Target_F2['Very High'], label='Target_F2_rule4')
+
+                Target_F2_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Close'] & f_orientation_size2['Close']),
+                                            consequent=Target_F2['High'], label='Target_F2_rule5')
+
+                Target_F2_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Far'] & f_orientation_size2['Close']),
+                                            consequent=Target_F2['Medium'], label='Target_F2_rule6')
+
+                Target_F2_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Imminent'] & f_orientation_size2['Far']),
+                                            consequent=Target_F2['Very High'], label='Target_F2_rule7')
+
+                Target_F2_rule8 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Close'] & f_orientation_size2['Far']),
+                                            consequent=Target_F2['High'], label='Target_F2_rule8')
+
+                Target_F2_rule9 = ctrl.Rule(antecedent=(f_hypotenuse_size2['Far'] & f_orientation_size2['Far']),
+                                            consequent=Target_F2['Medium'], label='Target_F2_rule9')
+
+                Target_F2_system = ctrl.ControlSystem(
+                    rules=[Target_F2_rule1, Target_F2_rule2, Target_F2_rule3, Target_F2_rule4,
+                           Target_F2_rule5, Target_F2_rule6, Target_F2_rule7, Target_F2_rule8,
+                           Target_F2_rule9])
+                self.Target_F2_sim = ctrl.ControlSystemSimulation(Target_F2_system)
+
+                # For Size 3
+                f_orientation_size3 = ctrl.Antecedent(numpy.arange(-91, 271, 1), 'f_orientation_size3')
+                f_orientation_size3['In Sights'] = fuzz.trimf(f_orientation_size3.universe, [-15, 0, 15])
+                f_orientation_size3['Close'] = fuzz.trimf(f_orientation_size3.universe, [15, 45, 75])
+                f_orientation_size3['Far'] = fuzz.trimf(f_orientation_size3.universe, [75, 180, 285])
+                # shortest_distance < 50 + (12 * clast_size) We may wanna change the hypotenuse membership functions
+                f_hypotenuse_size3 = ctrl.Antecedent(numpy.arange(-81, 261, 1), 'f_hypotenuse_size3')
+                f_hypotenuse_size3['Imminent'] = fuzz.trimf(f_hypotenuse_size3.universe, [-80, 0, 80])
+                f_hypotenuse_size3['Close'] = fuzz.trimf(f_hypotenuse_size3.universe, [80, 140, 200])
+                f_hypotenuse_size3['Far'] = fuzz.trimf(f_hypotenuse_size3.universe, [140, 200, 260])
+                # Target_F
+                Target_F3 = ctrl.Consequent(numpy.arange(-26, 126, 1), 'Target_F3')
+                Target_F3['Very Low'] = fuzz.trimf(Target_F3.universe, [-25, 0, 25])
+                Target_F3['Low'] = fuzz.trimf(Target_F3.universe, [0, 25, 50])
+                Target_F3['Medium'] = fuzz.trimf(Target_F3.universe, [25, 50, 75])
+                Target_F3['High'] = fuzz.trimf(Target_F3.universe, [50, 75, 100])
+                Target_F3['Very High'] = fuzz.trimf(Target_F3.universe, [75, 100, 125])
+
+                Target_F3_rule1 = ctrl.Rule(
+                    antecedent=(f_hypotenuse_size3['Imminent'] & f_orientation_size3['In Sights']),
+                    consequent=Target_F3['Very High'], label='Target_F3_rule1')
+
+                Target_F3_rule2 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Close'] & f_orientation_size3['In Sights']),
+                                            consequent=Target_F3['High'], label='Target_F3_rule2')
+
+                Target_F3_rule3 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Far'] & f_orientation_size3['In Sights']),
+                                            consequent=Target_F3['Medium'], label='Target_F3_rule3')
+
+                Target_F3_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Imminent'] & f_orientation_size3['Close']),
+                                            consequent=Target_F3['Very High'], label='Target_F3_rule4')
+
+                Target_F3_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Close'] & f_orientation_size3['Close']),
+                                            consequent=Target_F3['High'], label='Target_F3_rule5')
+
+                Target_F3_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Far'] & f_orientation_size3['Close']),
+                                            consequent=Target_F3['Medium'], label='Target_F3_rule6')
+
+                Target_F3_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Imminent'] & f_orientation_size3['Far']),
+                                            consequent=Target_F3['Very High'], label='Target_F3_rule7')
+
+                Target_F3_rule8 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Close'] & f_orientation_size3['Far']),
+                                            consequent=Target_F3['High'], label='Target_F3_rule8')
+
+                Target_F3_rule9 = ctrl.Rule(antecedent=(f_hypotenuse_size3['Far'] & f_orientation_size3['Far']),
+                                            consequent=Target_F3['Medium'], label='Target_F3_rule9')
+
+                Target_F3_system = ctrl.ControlSystem(
+                    rules=[Target_F3_rule1, Target_F3_rule2, Target_F3_rule3, Target_F3_rule4,
+                           Target_F3_rule5, Target_F3_rule6, Target_F3_rule7, Target_F3_rule8,
+                           Target_F3_rule9])
+                self.Target_F3_sim = ctrl.ControlSystemSimulation(Target_F3_system)
+
+                # For Size 4
+                f_orientation_size4 = ctrl.Antecedent(numpy.arange(-91, 271, 1), 'f_orientation_size4')
+                f_orientation_size4['In Sights'] = fuzz.trimf(f_orientation_size4.universe, [-15, 0, 15])
+                f_orientation_size4['Close'] = fuzz.trimf(f_orientation_size4.universe, [15, 45, 75])
+                f_orientation_size4['Far'] = fuzz.trimf(f_orientation_size4.universe, [75, 180, 285])
+                # shortest_distance < 50 + (12 * clast_size) We may wanna change the hypotenuse membership functions
+                f_hypotenuse_size4 = ctrl.Antecedent(numpy.arange(-81, 261, 1), 'f_hypotenuse_size4')
+                f_hypotenuse_size4['Imminent'] = fuzz.trimf(f_hypotenuse_size4.universe, [-80, 0, 80])
+                f_hypotenuse_size4['Close'] = fuzz.trimf(f_hypotenuse_size4.universe, [80, 140, 200])
+                f_hypotenuse_size4['Far'] = fuzz.trimf(f_hypotenuse_size4.universe, [140, 200, 260])
+                # Target_F
+                Target_F4 = ctrl.Consequent(numpy.arange(-26, 126, 1), 'Target_F4')
+                Target_F4['Very Low'] = fuzz.trimf(Target_F4.universe, [-25, 0, 25])
+                Target_F4['Low'] = fuzz.trimf(Target_F4.universe, [0, 25, 50])
+                Target_F4['Medium'] = fuzz.trimf(Target_F4.universe, [25, 50, 75])
+                Target_F4['High'] = fuzz.trimf(Target_F4.universe, [50, 75, 100])
+                Target_F4['Very High'] = fuzz.trimf(Target_F4.universe, [75, 100, 125])
+
+                Target_F4_rule1 = ctrl.Rule(
+                    antecedent=(f_hypotenuse_size4['Imminent'] & f_orientation_size4['In Sights']),
+                    consequent=Target_F4['Very High'], label='Target_F4_rule1')
+
+                Target_F4_rule2 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Close'] & f_orientation_size4['In Sights']),
+                                            consequent=Target_F4['High'], label='Target_F4_rule2')
+
+                Target_F4_rule3 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Far'] & f_orientation_size4['In Sights']),
+                                            consequent=Target_F4['Very Low'], label='Target_F4_rule3')
+
+                Target_F4_rule4 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Imminent'] & f_orientation_size4['Close']),
+                                            consequent=Target_F4['High'], label='Target_F4_rule4')
+
+                Target_F4_rule5 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Close'] & f_orientation_size4['Close']),
+                                            consequent=Target_F4['Medium'], label='Target_F4_rule5')
+
+                Target_F4_rule6 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Far'] & f_orientation_size4['Close']),
+                                            consequent=Target_F4['Very Low'], label='Target_F4_rule6')
+
+                Target_F4_rule7 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Imminent'] & f_orientation_size4['Far']),
+                                            consequent=Target_F4['High'], label='Target_F4_rule7')
+
+                Target_F4_rule8 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Close'] & f_orientation_size4['Far']),
+                                            consequent=Target_F4['Low'], label='Target_F4_rule8')
+
+                Target_F4_rule9 = ctrl.Rule(antecedent=(f_hypotenuse_size4['Far'] & f_orientation_size4['Far']),
+                                            consequent=Target_F4['Very Low'], label='Target_F4_rule9')
+
+                Target_F4_system = ctrl.ControlSystem(
+                    rules=[Target_F4_rule1, Target_F4_rule2, Target_F4_rule3, Target_F4_rule4,
+                           Target_F4_rule5, Target_F4_rule6, Target_F4_rule7, Target_F4_rule8,
+                           Target_F4_rule9])
+                self.Target_F4_sim = ctrl.ControlSystemSimulation(Target_F4_system)
+
+            def actions(self, ship: SpaceShip, input_data: Dict[str, Tuple]) -> None:
+
+                """
+                Compute control actions of the ship. Perform all command actions via the ``ship``
+                argument. This class acts as an intermediary between the controller and the environment.
+                The environment looks for this function when calculating control actions for the Ship sprite.
+                :param ship: Object to use when controlling the SpaceShip
+                :param input_data: Input data which describes the current state of the environment
+                """
+                import fuzzy_asteroids
+                import skfuzzy.control as ctrl
+                import math
+                import numpy
+
+                roe_zone=self.roe_zone
+                roe_size = 2  # Max asteroid size the autotargeting system will engage
+                astnum = len(input_data['asteroids'])
+                if astnum > 0:
+                    distance = numpy.zeros(astnum)
+                    for p in range(0, astnum):
+                        distance[p] = 1000
+                    shortest_distance = 1000
+                    closest_asteroid = 0
+                    astnumo = astnum - 1
+                    closest_asteroids = [astnumo, astnumo, astnumo, astnumo, astnumo]
+                    total_velocity = abs((ship.velocity[0] ** 2 + ship.velocity[1] ** 2) ** 0.5)
+                    if total_velocity > 0:
+                        if ship.velocity[1] > 0:
+                            travel_angle = -1 * math.degrees(math.asin(ship.velocity[0] / total_velocity))
+                        elif ship.velocity[0] > 0:
+                            travel_angle = -180 + math.degrees(math.asin(ship.velocity[0] / total_velocity))
+                        elif ship.velocity[0] < 0:
+                            travel_angle = 180 + math.degrees(math.asin(ship.velocity[0] / total_velocity))
+                        else:
+                            travel_angle = 0
+
+                    sidefromcenter = 400 - ship.center_x
+                    above_center = 300 - ship.center_y
+                    distancefromcenter = ((ship.center_x - 400) ** 2 + (ship.center_y - 300) ** 2) ** 0.5
+                    if distancefromcenter > 0:
+                        anglefromcenter = self.rangle(sidefromcenter, distancefromcenter, above_center, sidefromcenter)
+                    else:
+                        anglefromcenter = 0
+                    """
+                    angle_from_center=self.rangle(sidefromcenter, distancefromcenter, above_center, sidefromcenter)
+                    """
+                    """Below it goes through the asteroids, 
+                    records their distance, 
+                    and sets the shortest distance and closest asteroid"""
+                    inrange_distance = numpy.zeros(astnum)
+                    inrange_asteroid = numpy.zeros(astnum)
+                    inrange_size = numpy.zeros(astnum)
+                    astrange = 0
+
+                    ab2 = numpy.zeros(100)
+                    lr2 = numpy.zeros(100)
+                    op2 = numpy.zeros(100)
+                    hyp2 = numpy.zeros(100)
+                    s_rangle_inrange = numpy.zeros(100)
+
+                    orientation2 = numpy.ones(100) * 100
+
+                    # Distance Finding Every Asteroids
+                    for n in range(0, astnum):
+                        distance[n] = (((input_data['asteroids'][n]['position'][0]) - ship.center_x) ** 2 + (
+                                (input_data['asteroids'][n]['position'][1]) - ship.center_y) ** 2) ** 0.5
+                        if distance[n] < shortest_distance:
+                            shortest_distance = distance[n]
+                            closest_asteroid = n
+
+                        # Distance-based multitasking
+                        elif distance[n] < roe_zone and input_data['asteroids'][n][
+                            'size'] <= roe_size:  # Variables defined above
+                            inrange_distance[astrange] = distance[n]
+                            inrange_asteroid[astrange] = n
+                            inrange_size[astrange] = input_data['asteroids'][n]['size']
+
+                            astrange += 1
+
+                    # Orientation Calculator
+                    Favorability = numpy.zeros(astrange)
+                    bloop = 0
+                    inrange_asteroid = numpy.int64(
+                        inrange_asteroid)  # Converts numpy float to integer (could be streamlined)
+                    for m in range(0, astrange):
+                        ab2[m] = input_data['asteroids'][inrange_asteroid[m]]['position'][1] - ship.center_y
+                        lr2[m] = input_data['asteroids'][inrange_asteroid[m]]['position'][0] - ship.center_x
+                        op2[m] = input_data['asteroids'][inrange_asteroid[m]]['position'][0] - ship.center_x
+                        hyp2[m] = inrange_distance[m]
+                        s_rangle_inrange[m] = self.rangle(op2[m], hyp2[m], ab2[m], lr2[m])
+
+                        orientation2[m] = abs(
+                            ship.angle - s_rangle_inrange[
+                                m])  # Orientation 2 is the relative angles of all ROE-free asteroids
+                        if inrange_size[m] == 4:
+                            self.Target_F4_sim.input['f_orientation_size4'] = orientation2[m]
+                            self.Target_F4_sim.input['f_hypotenuse_size4'] = inrange_distance[m]
+                            self.Target_F4_sim.compute()
+                            Favorability[m] = self.Target_F4_sim.output['Target_F4']
+                        elif inrange_size[m] == 3:
+                            self.Target_F3_sim.input['f_orientation_size3'] = orientation2[m]
+                            self.Target_F3_sim.input['f_hypotenuse_size3'] = inrange_distance[m]
+                            self.Target_F3_sim.compute()
+                            Favorability[m] = self.Target_F3_sim.output['Target_F3']
+                        elif inrange_size[m] == 2:
+                            self.Target_F2_sim.input['f_orientation_size2'] = orientation2[m]
+                            self.Target_F2_sim.input['f_hypotenuse_size2'] = inrange_distance[m]
+                            self.Target_F2_sim.compute()
+                            Favorability[m] = self.Target_F2_sim.output['Target_F2']
+                        elif inrange_size[m] == 1:
+                            self.Target_F1_sim.input['f_orientation_size1'] = orientation2[m]
+                            self.Target_F1_sim.input['f_hypotenuse_size1'] = inrange_distance[m]
+                            self.Target_F1_sim.compute()
+                            Favorability[m] = self.Target_F1_sim.output['Target_F1']
+                        if m == 0:
+                            if Favorability[m] > 0:
+                                Target = m
+                                bloop = bloop + 1
+                        elif Favorability[m] == numpy.max(Favorability[m]):
+                            Target = m
+                            bloop = bloop + 1
+
+                    abovebelow = input_data['asteroids'][closest_asteroid]['position'][1] - ship.center_y
+                    leftright = input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x
+                    opposite = (input_data['asteroids'][closest_asteroid]['position'][0] - ship.center_x)
+                    hypotenuse = shortest_distance
+                    s_rangle = self.rangle(opposite, hypotenuse, abovebelow, leftright)
+                    orientation = abs(ship.angle - s_rangle)
+                    if bloop > 0:
+                        if inrange_size[Target] < 4:
+                            Target_orientation = orientation2[Target]
+                            Target_angle = s_rangle_inrange[Target]
+                            Target_Distance = inrange_distance[Target]
+                            Target_size = inrange_size[Target]
+                            Target_Favorability = Favorability[m]
+
+                        else:
+                            Target_orientation = orientation
+                            Target_angle = s_rangle
+                            Target_Distance = shortest_distance
+                            Target_size = input_data['asteroids'][closest_asteroid]['size']
+                            Target_Favorability = 0
+                    elif bloop == 0:
+                        Target_orientation = orientation
+                        Target_angle = s_rangle
+                        Target_Distance = shortest_distance
+                        Target_size = input_data['asteroids'][closest_asteroid]['size']
+                        Target_Favorability = 0
+                    """
+                    s_rangle is the angle relative to the ship necessary for the ship to point at the closest asteroid
+                    """
+                    """ Positive if above, negative if below"""
+                    """ negative if left, positive if right"""
+
+                    normal_shipangle = self.norm(ship.angle)
+                    normal_astangle = self.norm(s_rangle)
+                    normal_cangle = self.norm(anglefromcenter)
+                    normal_target_angle = self.norm(Target_angle)
+                    diff = ship.angle - s_rangle
+                    leftright_dodge = self.leftright(normal_shipangle, normal_astangle)
+                    leftright_target = self.leftright(normal_shipangle, normal_target_angle)
+                    clast_size = input_data['asteroids'][closest_asteroid]['size']
+                    dodge_counter = 0
+                    """
+                    This is the master if function in which it determines which behavior mode to fall into 
+                    """
+
+                    if ship.respawn_time_left > 0 and shortest_distance < 45 + (5 * clast_size):  # Respawn Behavior
+                        if orientation > 160:
+                            ship.thrust = ship.thrust_range[1]
+                        elif orientation <= 160:
+                            ship.thrust = 0
+                            ship.turn_rate = 180
+
+                    else:
+
+                        if total_velocity > 1 + (shortest_distance / 260):  # Braking Speed Determinant
+
+                            """
+                            Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
+                            asteroids and you do you don't want it to slignshot past on into another
+                            """
+
+                            t_orientation = abs(ship.angle - travel_angle)
+                            if travel_angle == 0:
+                                pass
+                            elif t_orientation > 60:
+                                ship.thrust = ship.thrust_range[1]
+                            elif t_orientation < 60:
+                                ship.thrust = ship.thrust_range[0]
+                            else:
+                                print('something wonky afoot')
+
+                        elif shortest_distance < 45 + (15 * clast_size):
+                            """Evasive Manuevers, I think we could expand this to considering the closest three 
+                                asteroids and fuzzily deciding which direction to flee in
+
+                                for cases where an asteroid is perpindicularly approaching it needs to be able to distinguish left and right anf
+                                behave accordingly """
+                            dodge_counter = 1
+                            if orientation > 100:
+                                ship.thrust = ship.thrust_range[1]
+                            elif orientation > 60 and orientation < 100:
+                                ship.thrust = 0
+                            else:
+                                ship.thrust = ship.thrust_range[0]
+
+                            if leftright_dodge == 0 or leftright_dodge == 1:
+                                if leftright_dodge == 0 and orientation > 1:
+                                    ship.turn_rate = 180
+                                elif leftright_dodge == 0 and orientation <= 1:
+                                    ship.turn_rate = 90
+                                elif leftright_dodge == 1 and orientation > 1:
+                                    ship.turn_rate = -180
+                                else:
+                                    ship.turn_rate = -90
+
+                        elif ship.center_x > 600 or ship.center_x < 200 or ship.center_y > 400 or ship.center_y < 200:
+                            turn = self.leftright(normal_shipangle, normal_cangle)
+                            center_orientation = abs(ship.angle - anglefromcenter)
+                            if center_orientation < 60:
+                                ship.thrust = ship.thrust_range[1]
+                            elif turn == 0:
+                                ship.turn_rate = 180
+                            else:
+                                ship.turn_rate = -180
+
+                            """
+                            # Search and Destroy
+                            elif shortest_distance > 50 + (62 * clast_size):
+                            ship.thrust = ship.thrust_range[1]
+                            """
+                        # Search and Destroy Also Aiming for Target, will probs give it aiming for dodging
+                        elif Target_Distance > 50 + (62 * clast_size) and dodge_counter == 0:
+                            ship.thrust = ship.thrust_range[1]
+
+                        if leftright_target == 0 or leftright_target == 1:
+                            if leftright_target == 0 and Target_orientation > 3:
+                                ship.turn_rate = 180
+                            elif leftright_target == 0 and Target_orientation <= 3:
+                                ship.turn_rate = 90
+                            elif leftright_target == 1 and Target_orientation > 3:
+                                ship.turn_rate = -180
+                            else:
+                                ship.turn_rate = -90
+
+                        """
+                        Shooting Mechanism
+                        """
+                        self.wack += 4000  # wack increases until it reaches a fire threshold
+
+                        for l in range(0, len(orientation2)):  # runs this once for every asteroid in the ROE zone.
+                            # print(orientation2)
+                            if orientation < 1 or orientation2[l] < 1:  #
+                                # if orientation2[l] < 100:
+                                # print(orientation2[l])
+                                # if orientation2[l] < 4:
+                                # print('TRICK SHOT!')
+                                # ship.shoot()
+                                """
+                                if Target_Favorability<0.1 and Target_size==4 and astnum>50:
+                                    pass
+                                """
+                                if self.wack > Target_Distance ** 2:
+                                    self.wack = 0
+                                    ship.shoot()
+
+        for n in range (1,3):
+            game = TrainerEnvironment(settings=settings)
+            score = game.run(controller=FuzzyController())
+            fitness=score.asteroids_hit/score.deaths
 
         """
-        Service Calculation
-        """
-
-        # Create fuzzy variables (two inputs, one output)
-        attentiveness = ctrl.Antecedent(numpy.arange(0, 11, 1), 'attentiveness')
-        speed = ctrl.Antecedent(numpy.arange(0, 11, 1), 'speed')
-        friendliness = ctrl.Antecedent(numpy.arange(0, 11, 1), 'friendliness')
-        service_q = ctrl.Consequent(numpy.arange(-6, 16, 1), 'service')
-
-        # Use automf to define three membership function names
-        # Names: Bad, Neutral, Good
-        names = ['bad', 'neutral', 'good']
-        attentiveness.automf(names=names)
-        speed.automf(names=names)
-        friendliness.automf(names=names)
-
-        service_q['bad'] = fuzz.trimf(service_q.universe, [-5, 0, 5])
-        service_q['neutral'] = fuzz.trimf(service_q.universe, [0, 5, 10])
-        service_q['good'] = fuzz.trimf(service_q.universe, [5, 10, 15])
-
-        # Define rules Bad, Neutral, Good:
-        s_rule0 = ctrl.Rule(antecedent=((attentiveness['bad'] & speed['bad']) & friendliness['bad'] |
-                                        (attentiveness['bad'] & speed['neutral']) & friendliness['bad'] |
-                                        (attentiveness['bad'] & speed['good']) & friendliness['bad'] |
-                                        (attentiveness['neutral'] & speed['bad']) & friendliness['bad'] |
-                                        (attentiveness['good'] & speed['bad']) & friendliness['bad'] |
-                                        (attentiveness['neutral'] & speed['neutral']) & friendliness['bad'] |
-                                        (attentiveness['neutral'] & speed['good']) & friendliness['bad'] |
-                                        (attentiveness['good'] & speed['neutral']) & friendliness['bad'] |
-                                        (attentiveness['bad'] & speed['bad']) & friendliness['neutral'] |
-                                        (attentiveness['bad'] & speed['neutral']) & friendliness['neutral'] |
-                                        (attentiveness['neutral'] & speed['bad']) & friendliness['neutral']),
-                            consequent=service_q['bad'], label='s_rule b')
-
-        s_rule1 = ctrl.Rule(antecedent=((attentiveness['neutral'] & speed['neutral']) & friendliness['neutral'] |
-                                        (attentiveness['good'] & speed['good']) & friendliness['bad'] |
-                                        (attentiveness['bad'] & speed['good']) & friendliness['neutral'] |
-                                        (attentiveness['good'] & speed['bad']) & friendliness['neutral'] |
-                                        (attentiveness['bad'] & speed['bad']) & friendliness['good'] |
-                                        (attentiveness['bad'] & speed['neutral']) & friendliness['good'] |
-                                        (attentiveness['bad'] & speed['good']) & friendliness['good'] |
-                                        (attentiveness['neutral'] & speed['bad']) & friendliness['good'] |
-                                        (attentiveness['good'] & speed['bad']) & friendliness['good']),
-                            consequent=service_q['neutral'], label='s_rule n')
-
-        s_rule2 = ctrl.Rule(antecedent=((attentiveness['neutral'] & speed['good']) & friendliness['neutral'] |
-                                        (attentiveness['good'] & speed['neutral']) & friendliness['neutral'] |
-                                        (attentiveness['good'] & speed['good']) & friendliness['neutral'] |
-                                        (attentiveness['neutral'] & speed['neutral']) & friendliness['good'] |
-                                        (attentiveness['neutral'] & speed['good']) & friendliness['good'] |
-                                        (attentiveness['good'] & speed['neutral']) & friendliness['good'] |
-                                        (attentiveness['good'] & speed['good']) & friendliness['good']),
-                            consequent=service_q['good'], label='s_rule g')
-
-        # Add rules to control system
-        system = ctrl.ControlSystem(rules=[s_rule0, s_rule1, s_rule2])
-
-        s_sim = ctrl.ControlSystemSimulation(system)
-
-        # print(round(calc_service))
-
-        # Create fuzzy variables (three inputs, one output)
-        food = ctrl.Antecedent(numpy.arange(0, 11, 1), 'food')
-        service = ctrl.Antecedent(numpy.arange(0, 11, 1), 'service')
-        tip = ctrl.Consequent(numpy.arange(-6, 16, 1), 'tip')
-
-        # Use automf to define three membership function names
-        # Names: Bad, Neutral, Good
-        names = ['bad', 'neutral', 'good']
-        service.automf(names=names)
-        food.automf(names=names)
-
-        tip['low'] = fuzz.trimf(tip.universe, [-5, 0, 5])
-        tip['medium'] = fuzz.trimf(tip.universe, [0, 5, 10])
-        tip['high'] = fuzz.trimf(tip.universe, [5, 10, 15])
-
         def truncate(n, decimals=0):
             multiplier = 10 ** decimals
             return int(n * multiplier) / multiplier
-
-        diff_total = 0
-        # Define rules Bad, Neutral, Good:
-        for x in range(0, 208):
-            """
-            Based on the information from the chromosomes, 
-            the rules of the inference system are changed
-            """
-            """ Rule 1 """
-            if individual[0] == 1:
-                t_rule0 = ctrl.Rule(antecedent=(food['bad'] & service['bad']), consequent=tip['low'], label='t_rule_0')
-            if individual[0] == 2:
-                t_rule0 = ctrl.Rule(antecedent=(food['bad'] & service['bad']), consequent=tip['medium'],
-                                    label='t_rule_0')
-            if individual[0] == 3:
-                t_rule0 = ctrl.Rule(antecedent=(food['bad'] & service['bad']), consequent=tip['high'], label='t_rule_0')
-
-            """ Rule 2 """
-            if individual[1] == 1:
-                t_rule1 = ctrl.Rule(antecedent=(food['bad'] & service['neutral']), consequent=tip['low'],
-                                    label='t_rule_1')
-            if individual[1] == 2:
-                t_rule1 = ctrl.Rule(antecedent=(food['bad'] & service['neutral']), consequent=tip['medium'],
-                                    label='t_rule_1')
-            if individual[1] == 3:
-                t_rule1 = ctrl.Rule(antecedent=(food['bad'] & service['neutral']), consequent=tip['high'],
-                                    label='t_rule_1')
-
-            """ Rule 3 """
-            if individual[2] == 1:
-                t_rule2 = ctrl.Rule(antecedent=(food['neutral'] & service['bad']), consequent=tip['low'],
-                                    label='t_rule_2')
-            if individual[2] == 2:
-                t_rule2 = ctrl.Rule(antecedent=(food['neutral'] & service['bad']), consequent=tip['medium'],
-                                    label='t_rule_2')
-            if individual[2] == 3:
-                t_rule2 = ctrl.Rule(antecedent=(food['neutral'] & service['bad']), consequent=tip['high'],
-                                    label='t_rule_2')
-
-            """ Rule 4 """
-            if individual[3] == 1:
-                t_rule3 = ctrl.Rule(antecedent=(food['neutral'] & service['neutral']), consequent=tip['low'],
-                                    label='t_rule_3')
-            if individual[3] == 2:
-                t_rule3 = ctrl.Rule(antecedent=(food['neutral'] & service['neutral']), consequent=tip['medium'],
-                                    label='t_rule_3')
-            if individual[3] == 3:
-                t_rule3 = ctrl.Rule(antecedent=(food['neutral'] & service['neutral']), consequent=tip['high'],
-                                    label='t_rule_3')
-
-            """ Rule 5 """
-            if individual[4] == 1:
-                t_rule4 = ctrl.Rule(antecedent=(food['good'] & service['bad']), consequent=tip['low'], label='t_rule_4')
-            if individual[4] == 2:
-                t_rule4 = ctrl.Rule(antecedent=(food['good'] & service['bad']), consequent=tip['medium'],
-                                    label='t_rule_4')
-            if individual[4] == 3:
-                t_rule4 = ctrl.Rule(antecedent=(food['good'] & service['bad']), consequent=tip['high'],
-                                    label='t_rule_4')
-
-            """ Rule 6 """
-            if individual[5] == 1:
-                t_rule5 = ctrl.Rule(antecedent=(food['bad'] & service['good']), consequent=tip['low'], label='t_rule_5')
-            if individual[5] == 2:
-                t_rule5 = ctrl.Rule(antecedent=(food['bad'] & service['good']), consequent=tip['medium'],
-                                    label='t_rule_5')
-            if individual[5] == 3:
-                t_rule5 = ctrl.Rule(antecedent=(food['bad'] & service['good']), consequent=tip['high'],
-                                    label='t_rule_5')
-
-            """ Rule 7 """
-            if individual[6] == 1:
-                t_rule6 = ctrl.Rule(antecedent=(food['neutral'] & service['good']), consequent=tip['low'],
-                                    label='t_rule_6')
-            if individual[6] == 2:
-                t_rule6 = ctrl.Rule(antecedent=(food['neutral'] & service['good']), consequent=tip['medium'],
-                                    label='t_rule_6')
-            if individual[6] == 3:
-                t_rule6 = ctrl.Rule(antecedent=(food['neutral'] & service['good']), consequent=tip['high'],
-                                    label='t_rule_6')
-
-            """ Rule 8 """
-            if individual[7] == 1:
-                t_rule7 = ctrl.Rule(antecedent=(food['good'] & service['neutral']), consequent=tip['low'],
-                                    label='t_rule_7')
-            if individual[7] == 2:
-                t_rule7 = ctrl.Rule(antecedent=(food['good'] & service['neutral']), consequent=tip['medium'],
-                                    label='t_rule_7')
-            if individual[7] == 3:
-                t_rule7 = ctrl.Rule(antecedent=(food['good'] & service['neutral']), consequent=tip['high'],
-                                    label='t_rule_7')
-
-            """ Rule 9 """
-            if individual[8] == 1:
-                t_rule8 = ctrl.Rule(antecedent=(food['good'] & service['good']), consequent=tip['low'],
-                                    label='t_rule_8')
-            if individual[8] == 2:
-                t_rule8 = ctrl.Rule(antecedent=(food['good'] & service['good']), consequent=tip['medium'],
-                                    label='t_rule_8')
-            if individual[8] == 3:
-                t_rule8 = ctrl.Rule(antecedent=(food['good'] & service['good']), consequent=tip['high'],
-                                    label='t_rule_8')
-
-            """
-            t_rule0 = ctrl.Rule(antecedent=(food['bad'] & service['bad']),consequent=tip['low'], label='t_rule_0')
-            t_rule1 = ctrl.Rule(antecedent=(food['bad'] & service['neutral']),consequent=tip['low'], label='t_rule_1')
-            t_rule2 = ctrl.Rule(antecedent=(food['neutral'] & service['bad']),consequent=tip['low'], label='t_rule_2')
-            t_rule3 = ctrl.Rule(antecedent=(food['neutral'] & service['neutral']),consequent=tip['medium'], label='t_rule_3')
-            t_rule4 = ctrl.Rule(antecedent=(food['good'] & service['bad']),consequent=tip['medium'], label='t_rule_4')
-            t_rule5 = ctrl.Rule(antecedent=(food['bad'] & service['good']),consequent=tip['medium'], label='t_rule_5')
-            t_rule6 = ctrl.Rule(antecedent=(food['neutral'] & service['good']),consequent=tip['high'], label='t_rule_6')
-            t_rule7 = ctrl.Rule(antecedent=(food['good'] & service['neutral']),consequent=tip['high'], label='t_rule_7')
-            t_rule8 = ctrl.Rule(antecedent=(food['good'] & service['good']),consequent=tip['high'], label='t_rule_8')
-            """
-
-            # Add rules to control system
-            t_system = ctrl.ControlSystem(
-                rules=[t_rule0, t_rule1, t_rule2, t_rule3, t_rule4, t_rule5, t_rule6, t_rule7, t_rule8])
-
-            t_sim = ctrl.ControlSystemSimulation(t_system)
-            """
-            Inputs
-            """
-            quality.input['taste'] = data['food flavor'][x] * 10
-            if data['food flavor'][x] < 0:
-                quality.input['taste'] = 0
-            if data['food flavor'][x] > 1:
-                quality.input['taste'] = 10
-
-            quality.input['temp'] = data['food temperature'][x] * 10
-            if data['food temperature'][x] < 0:
-                quality.input['temp'] = 0
-            if data['food temperature'][x] > 1:
-                quality.input['temp'] = 10
-
-            quality.input['price'] = data['portion size'][x] * 10
-            if data['portion size'][x] < 0:
-                quality.input['price'] = 0
-            if data['portion size'][x] > 1:
-                quality.input['price'] = 10
-
-            quality.compute()
-            food_crisp = quality.output['quality']
-
-            s_sim.input['attentiveness'] = data['attentiveness'][x] * 10
-            if data['attentiveness'][x] < 0:
-                s_sim.input['attentiveness'] = 0
-            if data['attentiveness'][x] > 1:
-                s_sim.input['attentiveness'] = 10
-
-            s_sim.input['friendliness'] = data['friendliness'][x] * 10
-            if data['friendliness'][x] < 0:
-                s_sim.input['friendliness'] = 0
-            if data['friendliness'][x] > 1:
-                s_sim.input['friendliness'] = 10
-
-            s_sim.input['speed'] = data['speed of service'][x] * 10
-            if data['speed of service'][x] < 0:
-                s_sim.input['speed'] = 0
-            if data['speed of service'][x] > 1:
-                s_sim.input['speed'] = 10
-
-            s_sim.compute()
-            service_crisp = s_sim.output['service']
-
-            t_sim.input['food'] = food_crisp
-            t_sim.input['service'] = service_crisp
-
-            t_sim.compute()
-            crisp = t_sim.output['tip']
-            new_crisp = (crisp / 10) * 25
-
-            final_crisp = truncate(new_crisp, 4)
-            diff = (final_crisp - data['tip'][x]) * (final_crisp - data['tip'][x])
-            if data['tip'][x] < 0:
-                diff = (final_crisp - 0) * (final_crisp - 0)
-            if data['tip'][x] > 25:
-                diff = (final_crisp - 25) * (final_crisp - 25)
-            diff_total = diff_total + diff
-        print('one eval cycle done')
-        return 100 / diff_total,
+        """
+        return fitness
 
 
     # ----------
     # Operator registration
     # ----------
     # register the goal / fitness function
-    toolbox.register("evaluate", evalTip)
+    toolbox.register("evaluate", evalscore)
 
     # register the crossover operator
     toolbox.register("mate", tools.cxTwoPoint)
 
     # register a mutation operator with a probability to
     # flip each attribute/gene of 0.05
-    toolbox.register("mutate", tools.mutUniformInt, up=3, low=1, indpb=0.2)
+    toolbox.register("mutate", tools.mutUniformInt, up=1000, low=1, indpb=0.2)
 
     # operator for selecting individuals for breeding the next
     # generation: each individual of the current generation
@@ -482,10 +765,13 @@ if __name__ == "__main__":
         print("Best individual overall is %s, %s" % (hof_overall, hof_overall.fitness.values))
         print("Part of the Best individual is %s" % (hof_overall[7]))
 
-
+if __name__ == "__main__":
+    main()
+    """
     for i in range(1000):
         # Call run() on an instance of the TrainerEnvironment
         # This function automatically manages cleanup
-        score = game.run(controller=FuzzyController(), score=SampleScore())
+        score = game.run(controller=FuzzyController(ControllerBase,individual), score=SampleScore())
 
         print(f"Generation {i}: {str(score)}")
+    """
