@@ -1,5 +1,5 @@
 from typing import Tuple, Dict, Any
-
+from aiming import aiming_function
 from fuzzy_asteroids.fuzzy_controller import ControllerBase, SpaceShip
 
 
@@ -455,6 +455,7 @@ class FuzzyController(ControllerBase):
                 Target_Distance = shortest_distance
                 Target_size = input_data['asteroids'][closest_asteroid]['size']
                 Target_Favorability = 0
+
             """
             s_rangle is the angle relative to the ship necessary for the ship to point at the closest asteroid
             """
@@ -470,6 +471,21 @@ class FuzzyController(ControllerBase):
             leftright_target = self.leftright(normal_shipangle, normal_target_angle)
             clast_size = input_data['asteroids'][closest_asteroid]['size']
             dodge_counter = 0
+            if Target_orientation==orientation:
+                vx_mult = input_data['asteroids'][closest_asteroid]['velocity'][0]
+                vy_mult = input_data['asteroids'][closest_asteroid]['velocity'][1]
+
+                ant_angle2 = aiming_function(vx_mult, vy_mult, normal_astangle)
+                Target_orientation = abs(ship.angle - s_rangle + ant_angle2)
+            else:
+                vx_mult = input_data['asteroids'][inrange_asteroid[Target]]['velocity'][0]
+                vy_mult = input_data['asteroids'][inrange_asteroid[Target]]['velocity'][1]
+                Target_s_rangle=s_rangle_inrange[Target]
+                Target_normal_astangle=self.norm(Target_s_rangle)
+                ant_angle2 = aiming_function(vx_mult, vy_mult, Target_normal_astangle)
+                Target_orientation = abs(ship.angle - Target_s_rangle + ant_angle2)
+
+                pass
             """
             This is the master if function in which it determines which behavior mode to fall into 
             """
