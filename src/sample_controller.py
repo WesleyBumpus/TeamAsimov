@@ -29,7 +29,7 @@ class FuzzyController(ControllerBase):
         """
         Gene Constants
         """
-        self.roe_zone=1000
+        self.roe_zone=200
         """
         Checking the asteroid angle relative to the ship
         """
@@ -329,7 +329,7 @@ class FuzzyController(ControllerBase):
         import math
         import numpy
         roe_zone = self.roe_zone  # Max distance at which the autotargeting system will engage
-        roe_size = 4  # Max asteroid size the autotargeting system will engage
+        roe_size = 1  # Max asteroid size the autotargeting system will engage
 
         astnum = len(input_data['asteroids'])
         if astnum > 0:
@@ -511,9 +511,10 @@ class FuzzyController(ControllerBase):
                     ship.thrust = 0
                     ship.turn_rate = 180
 
+
             else:
 
-                if total_velocity > 1 + (shortest_distance / 250):  # Braking Speed Determinant
+                if total_velocity > 1 + (shortest_distance / 270):  # Braking Speed Determinant
 
                     """
                     Braking Manuever- For if the ship is going to fast. Probably best for when there's a lot of 
@@ -530,7 +531,7 @@ class FuzzyController(ControllerBase):
                     else:
                         print('something wonky afoot')
 
-                elif shortest_distance < 45 + (18 * clast_size):
+                elif shortest_distance < 45 + (10 * clast_size):
                     """Evasive Manuevers, I think we could expand this to considering the closest three 
                         asteroids and fuzzily deciding which direction to flee in
 
@@ -554,7 +555,7 @@ class FuzzyController(ControllerBase):
                         else:
                             ship.turn_rate = -90
 
-                elif ship.center_x > 600 or ship.center_x < 200 or ship.center_y > 400 or ship.center_y < 200:
+                elif ship.center_x > 700 or ship.center_x < 100 or ship.center_y > 500 or ship.center_y < 100:
                     turn = self.leftright(normal_shipangle, normal_cangle)
                     center_orientation = abs(ship.angle - anglefromcenter)
                     if center_orientation < 150:
@@ -591,7 +592,7 @@ class FuzzyController(ControllerBase):
                 for l in range(0, len(orientation2)):  # runs this once for every asteroid in the ROE zone.
                     # print(orientation2)
                     if dodge_counter==0:
-                        if orientation2[l] < 1: #Target_orientation < 2 or orientation2[l] < 2:
+                        if orientation < 1 or orientation2[l] < 1:
                             # if orientation2[l] < 100:
                             # print(orientation2[l])
                             # if orientation2[l] < 4:
@@ -605,7 +606,7 @@ class FuzzyController(ControllerBase):
                                 self.wack = 0
                                 ship.shoot()
                     else:
-                        if orientation2[l] < 1: #Target_orientation < 2 or orientation2[l] < 2:
+                        if Target_orientation < 2 or orientation2[l] < 2:
                             # if orientation2[l] < 100:
                             # print(orientation2[l])
                             # if orientation2[l] < 4:

@@ -9,7 +9,7 @@ if __name__ == "__main__":
         "graphics_on": True,
         "sound_on": False,
         # "frequency": 60,
-        "real_time_multiplier": 2,
+        "real_time_multiplier": 2000,
         # "lives": 3,
         # "prints": True,
         "allow_key_presses": True

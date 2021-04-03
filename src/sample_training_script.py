@@ -7,9 +7,6 @@ from typing import Tuple, Dict, Any
 import skfuzzy as fuzz
 import skfuzzy.control as ctrl
 import numpy
-from src.sample_controller import FuzzyController
-from sample_score import SampleScore
-from fuzzy_asteroids.fuzzy_controller import ControllerBase, SpaceShip
 from evaluator import evalscore
 
 if __name__ == "__main__":
@@ -43,14 +40,14 @@ if __name__ == "__main__":
     #                         define 'individual' to be an individual
     #                         consisting of 100 'attr_bool' elements ('genes')
     toolbox.register("individual", tools.initRepeat, creator.Individual,
-                     toolbox.attr_output, 9)
+                     toolbox.attr_output, 27)
 
     # define the population to be a list of individuals
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 
-    # the goal ('fitness') function to be maximized
-
+#############THIS IS WHERE EVALSCORE USED TO BE#####################
+    #evalscore = evalscore("individual")
 
     # ----------
     # Operator registration
@@ -81,7 +78,7 @@ if __name__ == "__main__":
 
         # create an initial population of 300 individuals (where
         # each individual is a list of integers)
-        pop = toolbox.population(n=20)
+        pop = toolbox.population(n=4)
         hof_overall = tools.selBest(pop, 1)[0]
 
         # CXPB  is the probability with which two individuals
@@ -94,6 +91,11 @@ if __name__ == "__main__":
 
         # Evaluate the entire population
         fitnesses = list(map(toolbox.evaluate, pop))
+        print(pop)
+        print(fitnesses)
+        print(len(pop))
+        print(len(fitnesses))
+        print(zip(pop, fitnesses))
         for ind, fit in zip(pop, fitnesses):
             ind.fitness.values = fit
 
@@ -167,7 +169,6 @@ if __name__ == "__main__":
         best_ind = tools.selBest(pop, 1)[0]
         print("Best individual of the last generation is %s, %s" % (best_ind, best_ind.fitness.values))
         print("Best individual overall is %s, %s" % (hof_overall, hof_overall.fitness.values))
-        print("Part of the Best individual is %s" % (hof_overall[7]))
 
 if __name__ == "__main__":
     main()
@@ -176,6 +177,5 @@ if __name__ == "__main__":
         # Call run() on an instance of the TrainerEnvironment
         # This function automatically manages cleanup
         score = game.run(controller=FuzzyController(ControllerBase,individual), score=SampleScore())
-
         print(f"Generation {i}: {str(score)}")
     """
