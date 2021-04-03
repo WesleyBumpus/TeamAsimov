@@ -40,7 +40,7 @@ if __name__ == "__main__":
     #                         define 'individual' to be an individual
     #                         consisting of 100 'attr_bool' elements ('genes')
     toolbox.register("individual", tools.initRepeat, creator.Individual,
-                     toolbox.attr_output, 27)
+                     toolbox.attr_output, 44)
 
     # define the population to be a list of individuals
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
