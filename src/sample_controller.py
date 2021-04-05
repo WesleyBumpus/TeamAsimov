@@ -7,6 +7,7 @@ import skfuzzy.control as ctrl
 import math
 import numpy
 
+
 class FuzzyController(ControllerBase):
     """
     Class to be used by UC Fuzzy Challenge competitors to create a fuzzy logic controller
@@ -24,20 +25,24 @@ class FuzzyController(ControllerBase):
         Create your fuzzy logic controllers and other objects here
         """
         print('run initiated')
-        individual = [599, 486, 157, 104, 243, 59, 522, 521, 83, 872, 191, 71, 862, 215, 439, 274, 719, 960, 700, 664,
-                      74, 624, 651, 176, 547, 747, 251, 168, 474, 389, 277, 948, 656, 705, 571, 225, 434, 979, 466, 787,
-                      795, 291, 235, 615]
+        self.wack = 0
+
+        individual = [599, 486, 157, 104, 243, 59, 522, 521, 83, 872, 191, 71, 862, 215, 439, 274, 719, 960, 700, 664, 74, 624, 651, 176, 547, 747, 251, 168, 474, 389, 277, 948, 656, 705, 571, 225, 542, 918, 466, 787, 795, 291, 235, 615]
+        #              1    2    3    4    5    6    7   8    9   10   11   12  13   14   15   16   17   18   19   20   21  22   23    24  25   26   27   28   29   30   31   32   33   34   35   36   37   38   39   40   41   42   43   44
 
         """
         Gene Constants
         """
         self.roe_zone = individual[36] / 1000 * 500
-        self.roe_zone = 108
+        self.roe_zone=610/1000*500
         # Maximum Distance for Multitasking, Default: 240
-        self.fuzzy_roe = individual[37] / 1000 * 250
-        self.fuzzy_roe=0.7*self.roe_zone
+        self.fuzzy_roe = individual[37] / 1000 * self.roe_zone
+        self.fuzzy_roe=918/1000*self.roe_zone
         # Minimum Distance for Fuzzy application, Default: 120
+        self.edgeclear=542/1000*275
+        #determines the distance from the edge before edge clearing behavior starts
         self.wack_coef = individual[38] / 1000 * 200
+        self.wack_coef=230
         # Controls Rate of Fire, considering distance. 10 is 1 per target, Default: 100
         self.brake_speed_power = individual[39] / 1000 * 500
         # Controls Speed at which the craft will not exceed. Variable by size. Default: 250, lower is faster.
@@ -49,7 +54,7 @@ class FuzzyController(ControllerBase):
         # Closeness where evasive behavior is triggered. Default: 45
         self.evasive_size_adjust = individual[43] / 1000 * 50
         # Closeness to where evasive behavior is triggered. Variable by size. Default: 20
-        self.wack = 0
+
         """
         Checking the asteroid angle relative to the ship
         """
@@ -114,7 +119,8 @@ class FuzzyController(ControllerBase):
         """
         Asteroid Selecting Fuzzy System
         For simplicity of code (Not necessarily Compactness I'm going to code one fuzzy system for each size class)
-        Finds Favorability 
+        Finds Favorability for asteroids that aren't within the defensive shooting radius, at which it just shoots the 
+        closest asteroid. We found that fuzzy trees add hesitation that it can't have when its about to get hit. 
         """
         # For Size 1
         f_orientation_size1 = ctrl.Antecedent(numpy.arange(-91, 271, 1), 'f_orientation_size1')
@@ -123,8 +129,8 @@ class FuzzyController(ControllerBase):
         f_orientation_size1['Far'] = fuzz.trimf(f_orientation_size1.universe, [75, 180, 285])
 
         # shortest_distance < 50 + (12 * clast_size)
-        names=['Imminent','Close','Far']
-        f_hypotenuse_size1 = ctrl.Antecedent(numpy.arange(0,self.roe_zone+1,1), 'f_hypotenuse_size1')
+        names = ['Imminent', 'Close', 'Far']
+        f_hypotenuse_size1 = ctrl.Antecedent(numpy.arange(0, self.roe_zone + 1, 1), 'f_hypotenuse_size1')
         f_hypotenuse_size1.automf(names=names)
         """"
         f_hypotenuse_size1['Imminent'] = fuzz.trimf(f_hypotenuse_size1.universe, [-80, 0, 80])
@@ -338,12 +344,12 @@ class FuzzyController(ControllerBase):
     def actions(self, ship: SpaceShip, input_data: Dict[str, Tuple]) -> None:
 
         """
-                Compute control actions of the ship. Perform all command actions via the ``ship``
-                argument. This class acts as an intermediary between the controller and the environment.
-                The environment looks for this function when calculating control actions for the Ship sprite.
-                :param ship: Object to use when controlling the SpaceShip
-                :param input_data: Input data which describes the current state of the environment
-                """
+        Compute control actions of the ship. Perform all command actions via the ``ship``
+        argument. This class acts as an intermediary between the controller and the environment.
+        The environment looks for this function when calculating control actions for the Ship sprite.
+        :param ship: Object to use when controlling the SpaceShip
+        :param input_data: Input data which describes the current state of the environment
+        """
         roe_zone = self.roe_zone  # Max distance at which the autotargeting system will engage
         roe_size = 1  # Max asteroid size the autotargeting system will engage
 
@@ -569,10 +575,10 @@ class FuzzyController(ControllerBase):
                         else:
                             ship.turn_rate = -90
 
-                elif ship.center_x > 650 or ship.center_x < 150 or ship.center_y > 550 or ship.center_y < 150:
+                elif ship.center_x > 800-self.edgeclear or ship.center_x < self.edgeclear or ship.center_y > 600-self.edgeclear or ship.center_y < self.edgeclear:
                     turn = self.leftright(normal_shipangle, normal_cangle)
                     center_orientation = abs(ship.angle - anglefromcenter)
-                    if center_orientation < 180:
+                    if center_orientation < 150:
                         ship.thrust = ship.thrust_range[1]
                     elif turn == 0:
                         ship.turn_rate = 180
@@ -605,13 +611,13 @@ class FuzzyController(ControllerBase):
 
                 for l in range(0, len(orientation2)):  # runs this once for every asteroid in the ROE zone.
                     if dodge_counter == 0:
-                        if orientation < 2 * clast_size or orientation2[l] < 2:
+                        if orientation < 3 * clast_size or orientation2[l] < 3:
 
                             if self.wack > Target_Distance:
                                 self.wack = 0
                                 ship.shoot()
                     else:
-                        if Target_orientation < 2 * clast_size or orientation2[l] < 2:
+                        if Target_orientation < 3 * clast_size or orientation2[l] < 3:
 
                             if self.wack > Target_Distance:
                                 self.wack = 0

@@ -47,6 +47,8 @@ def evalscore(individual):
             # Maximum Distance for Multitasking, Default: 240
             self.fuzzy_roe=(individual[1]/1000)*self.roe_zone
             # Minimum Distance for Fuzzy application, Default: 120
+            self.edgeclear=individual[2]/1000*275
+
             self.wack_coef = individualbest[38] / 1000 * 200
             # Controls Rate of Fire, considering distance. 10 is 1 per target, Default: 100
             self.brake_speed_power = individualbest[39] / 1000 * 500
@@ -579,7 +581,7 @@ def evalscore(individual):
                             else:
                                 ship.turn_rate = -90
 
-                    elif ship.center_x > 650 or ship.center_x < 150 or ship.center_y > 550 or ship.center_y < 150:
+                    elif ship.center_x > 800-self.edgeclear or ship.center_x < self.edgeclear or ship.center_y > 600-self.edgeclear or ship.center_y < self.edgeclear:
                         turn = self.leftright(normal_shipangle, normal_cangle)
                         center_orientation = abs(ship.angle - anglefromcenter)
                         if center_orientation < 180:
@@ -626,15 +628,14 @@ def evalscore(individual):
                                 if self.wack > Target_Distance:
                                     self.wack = 0
                                     ship.shoot()
-
-
-    game = TrainerEnvironment(settings=settings)
-    score = game.run(controller=FuzzyController())
-    if score.deaths==0:
-        fitness=24
-    else:
-        fitness = 18 / score.deaths
-
+    fitness=0
+    for b in range(0, 3):
+        game = TrainerEnvironment(settings=settings)
+        score = game.run(controller=FuzzyController())
+        if score.deaths == 0:
+            fitness += 24
+        else:
+            fitness += 18 / score.deaths - 5
 
 
     def truncate(n, decimals=0):
@@ -642,3 +643,4 @@ def evalscore(individual):
         return int(n * multiplier) / multiplier
     fitness=int(fitness)
     return fitness,
+

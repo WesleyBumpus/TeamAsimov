@@ -1,1 +1,7 @@
 git+https://github.com/TimArnettThales/FuzzyAsteroids.git@master#egg=fuzzy_asteroids
+DEAP
+numpy
+scikit-learn
+arcade
+scikit-fuzzy
+matplotlib

@@ -40,7 +40,7 @@ if __name__ == "__main__":
     #                         define 'individual' to be an individual
     #                         consisting of 100 'attr_bool' elements ('genes')
     toolbox.register("individual", tools.initRepeat, creator.Individual,
-                     toolbox.attr_output, 2)
+                     toolbox.attr_output, 3)
 
     # define the population to be a list of individuals
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
@@ -74,11 +74,11 @@ if __name__ == "__main__":
     """
 
     def main():
-        random.seed(42)
+        random.seed(153)
 
         # create an initial population of 300 individuals (where
         # each individual is a list of integers)
-        pop = toolbox.population(n=10)
+        pop = toolbox.population(n=15)
         hof_overall = tools.selBest(pop, 1)[0]
 
         # CXPB  is the probability with which two individuals
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         g = 0
 
         # Begin the evolution
-        while g < 15:
+        while g < 10:
             # A new generation
             g = g + 1
             print("-- Generation %i --" % g)
@@ -163,6 +163,8 @@ if __name__ == "__main__":
             hof_app = tools.selBest(pop, 1)[0]
             if hof_app.fitness.values > hof_overall.fitness.values:
                 hof_overall = hof_app
+
+            print("Best individual of the last generation is %s, %s" % (hof_overall, hof_overall.fitness.values))
 
         print("-- End of (successful) evolution --")
 
